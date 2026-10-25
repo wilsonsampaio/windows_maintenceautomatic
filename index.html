@@ -307,6 +307,23 @@ function allTools(){
   return TOOLS.concat(custom.map(c => Object.assign({}, c, {custom:true})));
 }
 
+/* variáveis do corpo que não vêm do Contexto nem dos inputs explícitos */
+function autoInputs(t){
+  const known = new Set([...(t.inputs || []).map(i => i.id), ...Object.keys(ctx)]);
+  const out = [], seen = new Set();
+  const re = /\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g;
+  let m;
+  while ((m = re.exec(String(t.body))) !== null){
+    const k = m[1];
+    if (known.has(k) || seen.has(k)) continue;
+    seen.add(k);
+    out.push({id:k, label:k, ph:'valor de ' + k});
+  }
+  return out;
+}
+
+function allInputs(t){ return (t.inputs || []).concat(autoInputs(t)); }
+
 function fill(t){
   const vals = Object.assign({}, ctx);
   (t.inputs || []).forEach(i => {
@@ -314,9 +331,12 @@ function fill(t){
     const pick = [sv, ctx[i.id], i.def].find(v => v !== undefined && v !== null && String(v).trim() !== '');
     vals[i.id] = pick === undefined ? '' : pick;
   });
-  return String(t.body).replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (m, k) =>
-    (vals[k] !== undefined && vals[k] !== '') ? vals[k] : '<' + k + '>'
-  );
+  return String(t.body).replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (m, k) => {
+    const sv = (SIN[t.id] || {})[k];
+    if (sv !== undefined && String(sv).trim() !== '') return sv;
+    if (vals[k] !== undefined && vals[k] !== '') return vals[k];
+    return '<' + k + '>';
+  });
 }
 
 function toast(msg, kind){
@@ -395,7 +415,7 @@ function setCat(c){
 /* ================= ferramentas ================= */
 function cardHTML(t){
   const r = RISK[t.risk] || RISK.safe;
-  const inputs = (t.inputs || []).map(i => {
+  const inputs = allInputs(t).map(i => {
     const v = ((SIN[t.id] || {})[i.id]) || ctx[i.id] || i.def || '';
     return `<label class="inp"><span>${esc(i.label)}</span>
       <input data-t="${t.id}" data-i="${i.id}" value="${esc(v)}" placeholder="${esc(i.ph || '')}"></label>`;
