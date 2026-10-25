@@ -1,0 +1,2285 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suporte Rápido — Painel de Manutenção Windows / AD</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+:root{
+  --bg:#0d1117; --bg2:#10151c; --panel:#151b24; --panel2:#1a212b; --line:#242c37;
+  --txt:#e4e9f0; --mut:#8d99a8; --acc:#4d8dff; --acc2:#2f6fe0; --accsoft:rgba(77,141,255,.12);
+  --ok:#2ecc71; --warn:#f0a020; --dang:#ff5f56; --code:#0a0e14;
+  --r:10px; --shadow:0 6px 24px rgba(0,0,0,.35);
+}
+html[data-theme="light"]{
+  --bg:#eef1f6; --bg2:#f6f8fb; --panel:#ffffff; --panel2:#f7f9fc; --line:#dde3ec;
+  --txt:#1b2330; --mut:#5d6a7c; --acc:#2563eb; --acc2:#1d4ed8; --accsoft:rgba(37,99,235,.10);
+  --code:#f2f4f8; --shadow:0 6px 24px rgba(20,30,50,.10);
+}
+body{
+  background:var(--bg); color:var(--txt);
+  font:14px/1.5 "Segoe UI",system-ui,-apple-system,Roboto,Ubuntu,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--acc);color:#fff}
+kbd{font:11px/1 ui-monospace,Consolas,monospace;background:var(--panel2);border:1px solid var(--line);
+  border-bottom-width:2px;border-radius:5px;padding:3px 5px;color:var(--mut)}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--acc)}
+
+/* ===== layout ===== */
+.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.sidebar{
+  background:var(--bg2);border-right:1px solid var(--line);padding:16px 12px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;
+}
+.brand{display:flex;gap:10px;align-items:center;padding:4px 6px 10px;border-bottom:1px solid var(--line)}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--acc),#7c5cff);
+  display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;flex:none}
+.brand h1{font-size:14px;margin:0;letter-spacing:.4px;text-transform:uppercase}
+.brand p{margin:1px 0 0;font-size:11px;color:var(--mut)}
+.navgroup{display:flex;flex-direction:column;gap:2px}
+.navlabel{font-size:10px;letter-spacing:1.4px;color:var(--mut);text-transform:uppercase;margin:8px 8px 4px}
+.navitem{
+  display:flex;align-items:center;gap:9px;padding:8px 9px;border-radius:8px;cursor:pointer;
+  border:0;background:none;width:100%;text-align:left;color:var(--txt);font-size:13.5px;
+}
+.navitem:hover{background:var(--panel)}
+.navitem.on{background:var(--accsoft);color:var(--acc);font-weight:600}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}
+.navitem .cnt{margin-left:auto;font-size:11px;color:var(--mut);background:var(--panel);
+  border:1px solid var(--line);border-radius:20px;padding:0 7px}
+.navitem.on .cnt{background:transparent;border-color:transparent;color:var(--acc)}
+.side-foot{margin-top:auto;font-size:11px;color:var(--mut);border-top:1px solid var(--line);padding-top:10px;line-height:1.7}
+.side-foot b{color:var(--txt)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{
+  position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+  display:flex;gap:12px;align-items:center;padding:12px 20px;
+}
+.search{flex:1;max-width:620px;position:relative;display:flex;align-items:center}
+.search input{
+  width:100%;background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  padding:9px 78px 9px 34px;outline:none;
+}
+.search input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--accsoft)}
+.search .mag{position:absolute;left:11px;color:var(--mut);pointer-events:none}
+.search kbd{position:absolute;right:9px}
+.top-actions{display:flex;gap:8px;margin-left:auto}
+#menuBtn{display:none}
+
+.ctxbar{
+  display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;
+  background:linear-gradient(90deg,var(--accsoft),transparent 70%);
+  border-bottom:1px solid var(--line);padding:12px 20px;
+}
+.ctxbar .f{display:flex;flex-direction:column;gap:4px}
+.ctxbar label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--mut)}
+.ctxbar input{
+  background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 9px;width:150px;outline:none;
+}
+.ctxbar input:focus{border-color:var(--acc)}
+.ctxbar input.pw{width:130px}
+.ctxnote{font-size:11px;color:var(--mut);margin-left:auto;max-width:260px;text-align:right}
+
+.view{padding:20px;flex:1}
+.hidden{display:none !important}
+
+/* ===== sections / cards ===== */
+.sect{margin-bottom:26px}
+.sect-h{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sect-h h2{font-size:13px;letter-spacing:1.4px;text-transform:uppercase;margin:0;color:var(--mut)}
+.sect-h .rule{height:1px;background:var(--line);flex:1}
+.sect-h .n{font-size:11px;color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:14px}
+.card{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  padding:14px;display:flex;flex-direction:column;gap:9px;min-width:0;
+}
+.card:hover{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.card.is-custom{border-style:dashed;border-color:color-mix(in srgb,#7c5cff 55%,var(--line))}
+.card-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.card-h h3{font-size:14.5px;margin:0;flex:1;min-width:120px}
+.risk{font-size:10px;letter-spacing:.7px;text-transform:uppercase;padding:2px 7px;border-radius:20px;font-weight:700}
+.risk.ok{background:rgba(46,204,113,.14);color:var(--ok)}
+.risk.warn{background:rgba(240,160,32,.15);color:var(--warn)}
+.risk.dang{background:rgba(255,95,86,.15);color:var(--dang)}
+.mine{font-size:10px;color:#a78bfa;border:1px dashed #a78bfa;padding:1px 6px;border-radius:20px}
+.desc{margin:0;font-size:12.5px;color:var(--mut)}
+.fields{display:flex;gap:8px;flex-wrap:wrap}
+.inp{display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px}
+.inp span{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+.inp input{
+  background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:6px 8px;outline:none;width:100%;
+}
+.inp input:focus{border-color:var(--acc)}
+.code{
+  margin:0;background:var(--code);border:1px solid var(--line);border-radius:8px;
+  padding:11px 12px;overflow:auto;max-height:260px;
+  font:12px/1.6 ui-monospace,Consolas,"Cascadia Mono",Menlo,monospace;color:#cfd8e3;white-space:pre;tab-size:2;
+}
+html[data-theme="light"] .code{color:#26313f}
+.card-f{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:auto}
+.lang{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);
+  border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+.tags{display:flex;gap:5px;flex-wrap:wrap}
+.tags i{font-style:normal;font-size:10.5px;color:var(--mut);background:var(--panel2);border-radius:5px;padding:1px 6px}
+.btn{
+  background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:7px 13px;
+  cursor:pointer;color:var(--txt);font-size:13px;white-space:nowrap;
+}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.btn.primary:hover{background:var(--acc2);color:#fff}
+.btn.sm{padding:4px 9px;font-size:11.5px}
+.btn.danger{color:var(--dang);border-color:rgba(255,95,86,.4)}
+.btn.danger:hover{background:rgba(255,95,86,.12);border-color:var(--dang);color:var(--dang)}
+.card-f .btn:last-child{margin-left:auto}
+
+/* ===== views: tickets / checklist / config ===== */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.panel h3{margin:0 0 10px;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--mut)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.f{display:flex;flex-direction:column;gap:4px}
+.f label{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut)}
+.f input,.f select,.f textarea{
+  background:var(--bg2);border:1px solid var(--line);border-radius:7px;padding:8px 9px;outline:none;width:100%;
+}
+.f textarea{min-height:80px;resize:vertical;font:12.5px/1.6 ui-monospace,Consolas,monospace}
+.f input:focus,.f select:focus,.f textarea:focus{border-color:var(--acc)}
+.stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 16px;min-width:110px}
+.stat b{display:block;font-size:22px;line-height:1.2}
+.stat span{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut)}
+.stat.a b{color:var(--acc)} .stat.w b{color:var(--warn)} .stat.o b{color:var(--ok)} .stat.d b{color:#a78bfa}
+
+.tk{background:var(--panel);border:1px solid var(--line);border-left-width:3px;border-radius:8px;
+  padding:11px 13px;display:flex;gap:12px;align-items:flex-start;margin-bottom:9px;flex-wrap:wrap}
+.tk.alta{border-left-color:var(--dang)} .tk.media{border-left-color:var(--warn)} .tk.baixa{border-left-color:var(--ok)}
+.tk .t{flex:1;min-width:200px}
+.tk .t b{display:block;font-size:14px}
+.tk .t span{font-size:11.5px;color:var(--mut)}
+.tk .t p{margin:5px 0 0;font-size:12.5px;color:var(--mut);white-space:pre-wrap}
+.tk select{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:5px 7px}
+.empty{color:var(--mut);font-size:13px;padding:22px;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
+
+.cl{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:15px}
+.cl-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cl-h b{font-size:14.5px;flex:1}
+.bar{height:6px;background:var(--panel2);border-radius:20px;overflow:hidden;margin-bottom:10px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),#7c5cff);transition:width .25s}
+.cl ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.cl li{display:flex;gap:9px;align-items:flex-start;padding:6px 7px;border-radius:6px;cursor:pointer;font-size:13px}
+.cl li:hover{background:var(--panel2)}
+.cl li input{margin-top:3px;accent-color:var(--acc)}
+.cl li.done span{color:var(--mut);text-decoration:line-through}
+.cl small{color:var(--mut);display:block;font-size:11.5px;text-decoration:none}
+
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start}
+.hint{font-size:12.5px;color:var(--mut);background:var(--panel2);border-left:3px solid var(--acc);
+  padding:9px 12px;border-radius:0 7px 7px 0;margin:10px 0}
+.hint.warn{border-left-color:var(--warn)}
+code.inline{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;
+  font:12px ui-monospace,Consolas,monospace}
+.foot{color:var(--mut);font-size:11.5px;text-align:center;padding:18px;border-top:1px solid var(--line);margin-top:20px}
+
+/* ===== toast / misc ===== */
+#toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--panel);border:1px solid var(--acc);color:var(--txt);padding:10px 18px;border-radius:9px;
+  box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:99;font-size:13px;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{border-color:var(--dang);color:var(--dang)}
+
+@media(max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:0;top:0;width:250px;z-index:50;transform:translateX(-100%);transition:.2s}
+  .sidebar.open{transform:none;box-shadow:var(--shadow)}
+  #menuBtn{display:inline-block}
+  .grid{grid-template-columns:1fr}
+  .ctxnote{display:none}
+  .search kbd{display:none}
+  .search input{padding-right:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">SR</div>
+      <div>
+        <h1>Suporte Rápido</h1>
+        <p>Manutenção Windows · AD · Remoto</p>
+      </div>
+    </div>
+
+    <div class="navgroup" id="navViews"></div>
+    <div class="navgroup" id="navCats"></div>
+
+    <div class="side-foot">
+      <b>Dica:</b> preencha o <b>Contexto</b> uma vez e todos os scripts já saem preenchidos.
+      Ctrl+K busca · Ctrl+Shift+C copia a 1ª ferramenta visível.
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="btn sm" id="menuBtn">☰ Menu</button>
+      <div class="search">
+        <span class="mag">⌕</span>
+        <input id="search" placeholder="Buscar ferramenta, comando ou tag… (ex.: bloqueio, 4740, cache, mstsc)">
+        <kbd>Ctrl K</kbd>
+      </div>
+      <div class="top-actions">
+        <button class="btn sm" id="btnExport">Exportar</button>
+        <button class="btn sm" id="btnImport">Importar</button>
+        <button class="btn sm" id="btnTheme">☀</button>
+      </div>
+    </header>
+
+    <section class="ctxbar" id="ctxbar">
+      <div class="f"><label>Usuário</label><input data-ctx="usuario" placeholder="jsilva"></div>
+      <div class="f"><label>Host</label><input data-ctx="host" placeholder="PC-ABC123"></div>
+      <div class="f"><label>IP</label><input data-ctx="ip" placeholder="10.0.1.55"></div>
+      <div class="f"><label>Domínio</label><input data-ctx="dominio" placeholder="empresa.local"></div>
+      <div class="f"><label>Senha temporária</label><input data-ctx="senha" class="pw" type="password" placeholder="••••••••"></div>
+      <div class="ctxnote">Os campos aceitam <code class="inline">{{host}}</code> nos scripts. Vazio vira <code class="inline">&lt;host&gt;</code>.</div>
+    </section>
+
+    <div class="view" id="view-tools">
+      <div id="toolSections"></div>
+      <div class="foot">Painel local — nada é enviado para servidores. Revise sempre os comandos antes de executar como administrador.</div>
+    </div>
+
+    <div class="view hidden" id="view-tickets"></div>
+    <div class="view hidden" id="view-check"></div>
+    <div class="view hidden" id="view-config"></div>
+  </main>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="importFile" accept="application/json" hidden>
+
+<script>
+/* ================= storage ================= */
+const K = k => 'sr.' + k;
+function load(k, d){ try{ const v = localStorage.getItem(K(k)); return v === null ? d : JSON.parse(v); }catch(e){ return d; } }
+function save(k, v){ try{ localStorage.setItem(K(k), JSON.stringify(v)); }catch(e){ toast('Não foi possível salvar','err'); } }
+
+let ctx     = load('ctx', {usuario:'',host:'',ip:'',dominio:'',senha:''});
+let custom  = load('custom', []);
+let tickets = load('tickets', []);
+let checks  = load('checks', {});
+let prefs   = load('prefs', {cat:'all', view:'tools', theme:'dark'});
+const SIN = {}; // inputs da sessão: SIN[toolId][inputId]
+
+/* ================= helpers ================= */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+
+const RISK = {
+  safe:  {t:'Seguro',  c:'ok'},
+  warn:  {t:'Atenção', c:'warn'},
+  danger:{t:'Crítico', c:'dang'}
+};
+const EXT = {ps:'ps1', cmd:'bat', bat:'bat', reg:'reg', txt:'txt', url:'url', html:'html', rdp:'rdp'};
+
+const CATS = [
+  {id:'remoto',      name:'Acesso Remoto',        color:'#4d8dff'},
+  {id:'senha',       name:'Senhas & Contas',      color:'#2ecc71'},
+  {id:'bloqueio',    name:'Bloqueio de Conta',    color:'#ff5f56'},
+  {id:'ad',          name:'Active Directory',     color:'#7c5cff'},
+  {id:'navegador',   name:'Navegador & Cache',    color:'#f0a020'},
+  {id:'rede',        name:'Rede & Conectividade', color:'#22d3ee'},
+  {id:'manutencao',  name:'Manutenção Rápida',    color:'#f472b6'},
+  {id:'util',        name:'Utilitários',          color:'#94a3b8'}
+];
+const catName = id => (CATS.find(c => c.id === id) || {name:id}).name;
+
+function allTools(){
+  return TOOLS.concat(custom.map(c => Object.assign({}, c, {custom:true})));
+}
+
+function fill(t){
+  const vals = Object.assign({}, ctx);
+  (t.inputs || []).forEach(i => {
+    const sv = (SIN[t.id] || {})[i.id];
+    const pick = [sv, ctx[i.id], i.def].find(v => v !== undefined && v !== null && String(v).trim() !== '');
+    vals[i.id] = pick === undefined ? '' : pick;
+  });
+  return String(t.body).replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (m, k) =>
+    (vals[k] !== undefined && vals[k] !== '') ? vals[k] : '<' + k + '>'
+  );
+}
+
+function toast(msg, kind){
+  const el = $('#toast');
+  el.textContent = msg;
+  el.className = kind === 'err' ? 'show err' : 'show';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 2200);
+}
+
+function copyText(txt){
+  const done = () => toast('Copiado para a área de transferência ✓');
+  if (navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(txt).then(done).catch(() => fallback());
+  } else fallback();
+  function fallback(){
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); done(); }catch(e){ toast('Falha ao copiar','err'); }
+    document.body.removeChild(ta);
+  }
+}
+
+function download(name, content, mime){
+  const blob = new Blob([content], {type: mime || 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+}
+
+/* ================= navegação ================= */
+function renderNav(){
+  const views = [
+    {id:'tools',    name:'Ferramentas'},
+    {id:'tickets',  name:'Chamados', badge:tickets.filter(t => t.status !== 'Resolvido').length},
+    {id:'check',    name:'Checklists'},
+    {id:'config',   name:'Configurações'}
+  ];
+  $('#navViews').innerHTML = views.map(v => `
+    <button class="navitem ${prefs.view === v.id ? 'on':''}" data-view="${v.id}">
+      <span class="dot" style="background:${prefs.view===v.id?'var(--acc)':'var(--mut)'}"></span>
+      ${v.name}
+      ${v.badge ? `<span class="cnt">${v.badge}</span>` : ''}
+    </button>`).join('');
+
+  const counts = {};
+  allTools().forEach(t => counts[t.cat] = (counts[t.cat] || 0) + 1);
+  $('#navCats').innerHTML = `<div class="navlabel">Categorias</div>
+    <button class="navitem ${prefs.cat==='all'?'on':''}" data-cat="all">
+      <span class="dot" style="background:var(--acc)"></span>Todas<span class="cnt">${allTools().length}</span></button>
+    ${CATS.map(c => `
+      <button class="navitem ${prefs.cat===c.id?'on':''}" data-cat="${c.id}">
+        <span class="dot" style="background:${c.color}"></span>${c.name}
+        <span class="cnt">${counts[c.id]||0}</span></button>`).join('')}`;
+}
+
+function setView(v){
+  prefs.view = v; save('prefs', prefs);
+  ['tools','tickets','check','config'].forEach(x => $('#view-' + x).classList.toggle('hidden', x !== v));
+  renderNav();
+  if (v === 'tickets') renderTickets();
+  if (v === 'check') renderChecks();
+  if (v === 'config') renderConfig();
+  if (v === 'tools') $('#search').focus();
+}
+
+function setCat(c){
+  prefs.cat = c; save('prefs', prefs);
+  if (prefs.view !== 'tools') setView('tools');
+  renderNav(); renderTools();
+}
+
+/* ================= ferramentas ================= */
+function cardHTML(t){
+  const r = RISK[t.risk] || RISK.safe;
+  const inputs = (t.inputs || []).map(i => {
+    const v = ((SIN[t.id] || {})[i.id]) || ctx[i.id] || i.def || '';
+    return `<label class="inp"><span>${esc(i.label)}</span>
+      <input data-t="${t.id}" data-i="${i.id}" value="${esc(v)}" placeholder="${esc(i.ph || '')}"></label>`;
+  }).join('');
+  const ext = EXT[t.lang] || 'txt';
+  const dlLabel = t.link ? 'Abrir' : 'Baixar';
+  return `<article class="card ${t.custom ? 'is-custom':''}" data-id="${t.id}">
+    <div class="card-h">
+      <span class="risk ${r.c}">${r.t}</span>
+      <h3>${esc(t.title)}</h3>
+      ${t.custom ? '<span class="mine">meu</span>' : ''}
+    </div>
+    <p class="desc">${esc(t.desc)}</p>
+    ${inputs ? `<div class="fields">${inputs}</div>` : ''}
+    <pre class="code"><code id="code-${t.id}">${esc(fill(t))}</code></pre>
+    <div class="card-f">
+      <span class="lang">${esc(t.lang || 'txt')}</span>
+      <span class="tags">${(t.tags||[]).slice(0,4).map(x => `<i>${esc(x)}</i>`).join('')}</span>
+      <button class="btn sm" data-act="dl" data-id="${t.id}">${dlLabel}</button>
+      <button class="btn sm primary" data-act="copy" data-id="${t.id}">Copiar</button>
+      ${t.custom ? `<button class="btn sm danger" data-act="del" data-id="${t.id}">Excluir</button>` : ''}
+    </div>
+  </article>`;
+}
+
+function renderTools(){
+  const q = ($('#search').value || '').toLowerCase().trim();
+  const list = allTools().filter(t => {
+    if (prefs.cat !== 'all' && t.cat !== prefs.cat) return false;
+    if (!q) return true;
+    const hay = [t.title, t.desc, (t.tags||[]).join(' '), t.body, t.lang, catName(t.cat)].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+
+  const box = $('#toolSections');
+  if (!list.length){
+    box.innerHTML = `<div class="empty">Nada encontrado para <b>${esc(q || catName(prefs.cat))}</b>.
+      Tente: <i>4740</i>, <i>mstsc</i>, <i>cache</i>, <i>spooler</i>, <i>desbloquear</i>…</div>`;
+    return;
+  }
+  const groups = {};
+  list.forEach(t => (groups[t.cat] = groups[t.cat] || []).push(t));
+  const order = prefs.cat !== 'all' ? [prefs.cat] : CATS.map(c => c.id).filter(id => groups[id]);
+
+  box.innerHTML = order.filter(id => groups[id]).map(id => `
+    <section class="sect">
+      <div class="sect-h">
+        <span class="dot" style="background:${(CATS.find(c=>c.id===id)||{}).color||'#888'}"></span>
+        <h2>${esc(catName(id))}</h2>
+        <div class="rule"></div>
+        <span class="n">${groups[id].length} ${groups[id].length === 1 ? 'ferramenta' : 'ferramentas'}</span>
+      </div>
+      <div class="grid">${groups[id].map(cardHTML).join('')}</div>
+    </section>`).join('');
+}
+
+function refreshCodes(){
+  allTools().forEach(t => {
+    const el = document.getElementById('code-' + t.id);
+    if (el) el.textContent = fill(t);
+  });
+}
+
+function toolById(id){ return allTools().find(t => t.id === id); }
+
+function actCopy(id){
+  const t = toolById(id); if (!t) return;
+  if (t.link){ window.open(t.body, '_blank'); toast('Abrindo…'); return; }
+  copyText(fill(t));
+}
+function actDownload(id){
+  const t = toolById(id); if (!t) return;
+  if (t.link){ window.open(t.body, '_blank'); toast('Abrindo…'); return; }
+  const ext = EXT[t.lang] || 'txt';
+  const safe = t.id.replace(/[^a-z0-9\-_]/gi, '_');
+  if (ext === 'ps1'){
+    download(safe + '.ps1', 'chcp 65001 >$null\n' + fill(t), 'text/plain;charset=utf-8');
+  } else if (ext === 'bat' || ext === 'cmd'){
+    download(safe + '.bat', '@echo off\nchcp 65001 >nul\n' + fill(t), 'text/plain;charset=utf-8');
+  } else {
+    download(safe + '.' + ext, fill(t));
+  }
+  toast('Arquivo .' + ext + ' gerado ✓');
+}
+
+/* ================= chamados ================= */
+const STATUS = ['Aberto','Em andamento','Aguardando usuário','Resolvido'];
+
+function renderTickets(){
+  const stats = {
+    a: tickets.filter(t => t.status === 'Aberto').length,
+    w: tickets.filter(t => t.status === 'Em andamento').length,
+    p: tickets.filter(t => t.status === 'Aguardando usuário').length,
+    o: tickets.filter(t => t.status === 'Resolvido').length
+  };
+  const prio = p => p === 'Alta' ? 'alta' : p === 'Baixa' ? 'baixa' : 'media';
+  $('#view-tickets').innerHTML = `
+    <div class="stats">
+      <div class="stat a"><b>${stats.a}</b><span>Abertos</span></div>
+      <div class="stat w"><b>${stats.w}</b><span>Em andamento</span></div>
+      <div class="stat d"><b>${stats.p}</b><span>Aguardando</span></div>
+      <div class="stat o"><b>${stats.o}</b><span>Resolvidos</span></div>
+      <div class="stat"><b>${tickets.length}</b><span>Total</span></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <h3>Novo chamado</h3>
+      <div class="form-grid">
+        <div class="f"><label>Título</label><input id="tkTitle" placeholder="Ex.: Desbloquear conta"></div>
+        <div class="f"><label>Usuário</label><input id="tkUser" value="${esc(ctx.usuario)}" placeholder="jsilva"></div>
+        <div class="f"><label>Host</label><input id="tkHost" value="${esc(ctx.host)}" placeholder="PC-ABC123"></div>
+        <div class="f"><label>Prioridade</label><select id="tkPrio"><option>Alta</option><option selected>Média</option><option>Baixa</option></select></div>
+        <div class="f"><label>Status</label><select id="tkStatus">${STATUS.map(s => `<option>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="f" style="margin-top:10px"><label>Notas do atendimento</label>
+        <textarea id="tkNotes" placeholder="O que foi feito, comandos usados, retorno do usuário…"></textarea></div>
+      <div style="margin-top:10px"><button class="btn primary" id="tkAdd">Adicionar chamado</button></div>
+    </div>
+
+    <div class="sect-h"><h2>Fila</h2><div class="rule"></div>
+      <button class="btn sm" id="tkExport">Exportar fila (.json)</button>
+      <button class="btn sm danger" id="tkClear">Limpar resolvidos</button></div>
+
+    ${tickets.length ? tickets.map(t => `
+      <div class="tk ${prio(t.prio)}">
+        <div class="t">
+          <b>${esc(t.title)}</b>
+          <span>${esc(t.user || '—')} · ${esc(t.host || '—')} · prioridade ${esc(t.prio)} · ${esc(t.date)}</span>
+          ${t.notes ? `<p>${esc(t.notes)}</p>` : ''}
+        </div>
+        <select data-tk-status="${t.id}">
+          ${STATUS.map(s => `<option ${t.status === s ? 'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="btn sm danger" data-tk-del="${t.id}">Excluir</button>
+      </div>`).join('') : `<div class="empty">Nenhum chamado ainda. Adicione o primeiro acima — a fila fica salva neste navegador e pode ser exportada em JSON.</div>`}
+  `;
+
+  $('#tkAdd').onclick = () => {
+    const title = $('#tkTitle').value.trim();
+    if (!title){ toast('Dê um título ao chamado','err'); $('#tkTitle').focus(); return; }
+    tickets.unshift({
+      id: 'tk' + Date.now(), title,
+      user: $('#tkUser').value.trim(), host: $('#tkHost').value.trim(),
+      prio: $('#tkPrio').value, status: $('#tkStatus').value,
+      notes: $('#tkNotes').value.trim(),
+      date: new Date().toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})
+    });
+    save('tickets', tickets); renderTickets(); renderNav(); toast('Chamado registrado ✓');
+  };
+  $('#tkExport').onclick = () => download('chamados-suporte.json', JSON.stringify(tickets, null, 2), 'application/json');
+  $('#tkClear').onclick = () => {
+    if (!confirm('Remover todos os chamados com status "Resolvido"?')) return;
+    tickets = tickets.filter(t => t.status !== 'Resolvido');
+    save('tickets', tickets); renderTickets(); renderNav(); toast('Fila limpa');
+  };
+  $$('[data-tk-status]').forEach(sel => sel.onchange = () => {
+    const t = tickets.find(x => x.id === sel.dataset.tkStatus);
+    if (t){ t.status = sel.value; save('tickets', tickets); renderTickets(); renderNav(); }
+  });
+  $$('[data-tk-del]').forEach(b => b.onclick = () => {
+    tickets = tickets.filter(x => x.id !== b.dataset.tkDel);
+    save('tickets', tickets); renderTickets(); renderNav(); toast('Chamado removido');
+  });
+}
+
+/* ================= checklists ================= */
+function renderChecks(){
+  $('#view-check').innerHTML = `
+    <div class="hint">Marque conforme executa. O progresso fica salvo por checklist — use <b>Reiniciar</b> para começar um novo atendimento.</div>
+    <div class="cols">${CHECKLISTS.map(c => {
+      const st = checks[c.id] || {};
+      const done = c.steps.filter((_, i) => st[i]).length;
+      const pct = Math.round(done / c.steps.length * 100);
+      return `<div class="cl">
+        <div class="cl-h"><b>${esc(c.title)}</b>
+          <span class="lang">${pct}%</span>
+          <button class="btn sm" data-cl-reset="${c.id}">Reiniciar</button></div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <ol>${c.steps.map((s, i) => `
+          <li class="${st[i] ? 'done':''}" data-cl="${c.id}" data-i="${i}">
+            <input type="checkbox" ${st[i] ? 'checked':''} tabindex="-1">
+            <span>${esc(s)}</span>
+          </li>`).join('')}</ol>
+      </div>`;
+    }).join('')}</div>`;
+
+  $$('[data-cl]').forEach(li => li.onclick = () => {
+    const id = li.dataset.cl, i = li.dataset.i;
+    checks[id] = checks[id] || {};
+    checks[id][i] = !checks[id][i];
+    save('checks', checks); renderChecks();
+  });
+  $$('[data-cl-reset]').forEach(b => b.onclick = () => {
+    checks[b.dataset.clReset] = {}; save('checks', checks); renderChecks(); toast('Checklist zerado');
+  });
+}
+
+/* ================= configurações ================= */
+function renderConfig(){
+  const stats = {
+    tools: allTools().length, custom: custom.length,
+    tickets: tickets.length, checks: CHECKLISTS.length
+  };
+  $('#view-config').innerHTML = `
+    <div class="cols">
+      <div class="panel">
+        <h3>Backup & sincronização</h3>
+        <p class="desc">Exporte tudo (chamados, ferramentas criadas, contexto, checklists) em um único arquivo JSON e importe em outra máquina da equipe.</p>
+        <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+          <button class="btn primary" id="cfgExport">Exportar JSON</button>
+          <button class="btn" id="cfgImport">Importar JSON</button>
+          <button class="btn danger" id="cfgWipe">Apagar dados</button>
+        </div>
+        <div class="hint">Estado atual: <b>${stats.tools}</b> ferramentas (${stats.custom} suas), <b>${stats.tickets}</b> chamados, <b>${stats.checks}</b> checklists.</div>
+      </div>
+
+      <div class="panel">
+        <h3>Nova ferramenta (minhas)</h3>
+        <div class="form-grid">
+          <div class="f"><label>Título</label><input id="ctTitle" placeholder="Ex.: Reiniciar VPN"></div>
+          <div class="f"><label>Categoria</label><select id="ctCat">${CATS.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+          <div class="f"><label>Risco</label><select id="ctRisk"><option value="safe">Seguro</option><option value="warn">Atenção</option><option value="danger">Crítico</option></select></div>
+          <div class="f"><label>Linguagem</label><select id="ctLang"><option value="ps">PowerShell</option><option value="cmd">CMD/BAT</option><option value="reg">Registro</option><option value="txt">Texto</option></select></div>
+        </div>
+        <div class="f" style="margin-top:10px"><label>Descrição</label><input id="ctDesc" placeholder="Para que serve"></div>
+        <div class="f" style="margin-top:10px"><label>Corpo (use {{usuario}}, {{host}}… como variáveis)</label>
+          <textarea id="ctBody" rows="5" placeholder="ipconfig /flushdns"></textarea></div>
+        <div style="margin-top:10px"><button class="btn primary" id="ctAdd">Adicionar ferramenta</button></div>
+      </div>
+
+      <div class="panel">
+        <h3>Como usar o painel</h3>
+        <p class="desc">
+          1. Preencha o <b>Contexto</b> no topo (usuário, host, domínio).<br>
+          2. Busque pelo sintoma (<i>bloqueio</i>, <i>cache</i>, <i>lento</i>) ou pelo comando (<i>4740</i>, <i>mstsc</i>).<br>
+          3. Ajuste os campos da ferramenta e clique em <b>Copiar</b> — cole no PowerShell/CMD do PC.<br>
+          4. <b>Baixar</b> gera um .ps1/.bat pronto para rodar como administrador.<br>
+          5. Registre o atendimento na aba <b>Chamados</b> e use os <b>Checklists</b> para não esquecer nada.
+        </p>
+        <div class="hint warn"><b>Segurança:</b> o painel não executa nada por si só. Número de série, senha e dados de ticket nunca saem do seu navegador, a menos que você exporte o JSON.</div>
+        <p class="desc">Atalhos: <kbd>Ctrl</kbd>+<kbd>K</kbd> busca · <kbd>Esc</kbd> limpa · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> copia a 1ª ferramenta visível.</p>
+      </div>
+    </div>
+    <div class="foot">Suporte Rápido · painel autocontido (HTML único) · dados em localStorage + export JSON</div>`;
+
+  $('#cfgExport').onclick = doExport;
+  $('#cfgImport').onclick = () => $('#importFile').click();
+  $('#cfgWipe').onclick = () => {
+    if (!confirm('Apagar TODOS os dados locais (chamados, ferramentas criadas, contexto, checklists)?')) return;
+    ['ctx','custom','tickets','checks','prefs'].forEach(k => localStorage.removeItem(K(k)));
+    location.reload();
+  };
+  $('#ctAdd').onclick = () => {
+    const title = $('#ctTitle').value.trim(), body = $('#ctBody').value.trim();
+    if (!title || !body){ toast('Título e corpo são obrigatórios','err'); return; }
+    custom.push({
+      id: 'c' + Date.now(), cat: $('#ctCat').value, title,
+      desc: $('#ctDesc').value.trim() || 'Ferramenta criada pela equipe.',
+      risk: $('#ctRisk').value, lang: $('#ctLang').value, body,
+      tags: ['personalizada']
+    });
+    save('custom', custom);
+    ['ctTitle','ctDesc','ctBody'].forEach(x => $('#' + x).value = '');
+    renderNav(); renderTools(); toast('Ferramenta adicionada ✓');
+  };
+}
+
+/* ================= import / export ================= */
+function doExport(){
+  const data = {v:1, exported:new Date().toISOString(), ctx, custom, tickets, checks, prefs};
+  download('suporte-rapido-backup.json', JSON.stringify(data, null, 2), 'application/json');
+  toast('Backup exportado ✓');
+}
+function doImport(file){
+  const fr = new FileReader();
+  fr.onload = () => {
+    try{
+      const d = JSON.parse(fr.result);
+      if (typeof d !== 'object' || d === null) throw 0;
+      if (d.ctx)    { ctx = Object.assign(ctx, d.ctx); save('ctx', ctx); syncCtxInputs(); }
+      if (Array.isArray(d.custom)) { custom = d.custom; save('custom', custom); }
+      if (Array.isArray(d.tickets)){ tickets = d.tickets; save('tickets', tickets); }
+      if (d.checks) { checks = d.checks; save('checks', checks); }
+      if (d.prefs)  { prefs = Object.assign(prefs, d.prefs); save('prefs', prefs); setTheme(prefs.theme); }
+      renderNav(); renderTools(); renderTickets(); renderChecks(); renderConfig();
+      toast('Backup importado ✓');
+    }catch(e){ toast('Arquivo JSON inválido','err'); }
+  };
+  fr.readAsText(file);
+}
+
+/* ================= tema / contexto ================= */
+function setTheme(t){
+  prefs.theme = t; save('prefs', prefs);
+  document.documentElement.dataset.theme = t;
+  $('#btnTheme').textContent = t === 'dark' ? '☀' : '☾';
+}
+function syncCtxInputs(){ $$('[data-ctx]').forEach(i => i.value = ctx[i.dataset.ctx] || ''); }
+
+/* ================= eventos ================= */
+document.addEventListener('click', e => {
+  const nav = e.target.closest('[data-view]'); if (nav){ setView(nav.dataset.view); return; }
+  const cat = e.target.closest('[data-cat]');  if (cat){ setCat(cat.dataset.cat); return; }
+  const act = e.target.closest('[data-act]');
+  if (act){
+    if (act.dataset.act === 'copy') actCopy(act.dataset.id);
+    if (act.dataset.act === 'dl')   actDownload(act.dataset.id);
+    if (act.dataset.act === 'del'){
+      const t = toolById(act.dataset.id);
+      if (t && confirm('Excluir a ferramenta "' + t.title + '"?')){
+        custom = custom.filter(c => c.id !== t.id);
+        save('custom', custom); renderNav(); renderTools(); toast('Ferramenta excluída');
+      }
+    }
+    return;
+  }
+  if (e.target.closest('#menuBtn')) $('#sidebar').classList.toggle('open');
+});
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'search'){ renderTools(); return; }
+  if (e.target.dataset.ctx){
+    ctx[e.target.dataset.ctx] = e.target.value;
+    save('ctx', ctx); refreshCodes(); return;
+  }
+  if (e.target.dataset.t){
+    const tid = e.target.dataset.t;
+    SIN[tid] = SIN[tid] || {};
+    SIN[tid][e.target.dataset.i] = e.target.value;
+    const el = document.getElementById('code-' + tid);
+    const t = toolById(tid);
+    if (el && t) el.textContent = fill(t);
+  }
+});
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
+    e.preventDefault(); setView('tools'); $('#search').focus(); $('#search').select();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c'){
+    e.preventDefault();
+    const first = document.querySelector('.card [data-act="copy"]');
+    if (first) first.click();
+  }
+  if (e.key === 'Escape'){
+    const a = document.activeElement;
+    const inField = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName);
+    if (a && a.id === 'search'){ $('#search').value = ''; renderTools(); a.blur(); }
+    else if (!inField && $('#search').value){ $('#search').value = ''; renderTools(); }
+  }
+});
+
+$('#btnTheme').onclick  = () => setTheme(prefs.theme === 'dark' ? 'light' : 'dark');
+$('#btnExport').onclick = doExport;
+$('#btnImport').onclick = () => $('#importFile').click();
+$('#importFile').onchange = e => { if (e.target.files[0]) doImport(e.target.files[0]); e.target.value = ''; };
+
+/* ================= boot ================= */
+const TOOLS = [
+/* ---------- ACESSO REMOTO ---------- */
+{
+  id:'rdp', cat:'remoto', risk:'safe', lang:'cmd', title:'Abrir RDP no host do usuário',
+  desc:'Sessão Remote Desktop completa no PC informado. Rode no seu posto (admin).',
+  tags:['mstsc','rdp','remoto'],
+  inputs:[{id:'host', label:'Host / IP', ph:'PC-ABC123'}],
+  body:String.raw`mstsc /v:{{host}} /f`
+},
+{
+  id:'rdp-admin', cat:'remoto', risk:'warn', lang:'cmd', title:'RDP em modo console (/admin)',
+  desc:'Conecta na sessão ativa do usuário (não cria sessão nova). Ideal para assumir a tela que ele está vendo.',
+  tags:['mstsc','console','admin'],
+  inputs:[{id:'host', label:'Host / IP', ph:'PC-ABC123'}],
+  body:String.raw`mstsc /v:{{host}} /admin`
+},
+{
+  id:'rdp-custom', cat:'remoto', risk:'safe', lang:'rdp', title:'Arquivo .rdp com impressoras, drives e console',
+  desc:'Gera um .rdp pronto (baixe e dê dois cliques) com redirecionamento de impressora, drives e porta serial.',
+  tags:['mstsc','rdp','arquivo','redirect','impessora'],
+  inputs:[
+    {id:'host', label:'Host / IP', ph:'PC-ABC123'},
+    {id:'largura', label:'Largura', ph:'1440', def:'1440'},
+    {id:'altura', label:'Altura', ph:'900', def:'900'}
+  ],
+  body:String.raw`full address:s:{{host}}
+prompt for credentials on client:i:1
+administrative session:i:0
+screen mode id:i:2
+desktopwidth:i:{{largura}}
+desktopheight:i:{{altura}}
+session bpp:i:32
+redirectprinters:i:1
+redirectcomports:i:1
+redirectsmartcards:i:1
+redirectdrives:i:1
+redirectposdevices:i:0
+autoreconnection enabled:i:1
+smart sizing:i:1
+compression:i:1
+kdcproxyname:s:`
+},
+{
+  id:'rdp-enable', cat:'remoto', risk:'danger', lang:'ps', title:'Habilitar RDP no PC do usuário (remoto)',
+  desc:'Liga o RDP e a regra de firewall por registro remoto. Exige admin local no destino e SMB aberto. Use com cuidado.',
+  tags:['rdp','habilitar','registro','firewall'],
+  inputs:[{id:'host', label:'Host remoto', ph:'PC-ABC123'}],
+  body:String.raw`$h = '{{host}}'
+Set-ItemProperty -Path "\\$h\HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name fDenyTSConnections -Value 0
+Invoke-Command -ComputerName $h -ScriptBlock {
+  Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+}
+Write-Host "RDP habilitado em $h" -ForegroundColor Green`
+},
+{
+  id:'rdp-check', cat:'remoto', risk:'safe', lang:'ps', title:'Verificar se RDP/WinRM responde no host',
+  desc:'Teste rápido das portas 3389 (RDP) e 5985 (WinRM) antes de tentar conectar.',
+  tags:['porta','3389','winrm','teste'],
+  inputs:[{id:'host', label:'Host / IP', ph:'PC-ABC123'}],
+  body:String.raw`$h = '{{host}}'
+'TCP 3389 (RDP)','TCP 5985 (WinRM)','ICMP' | ForEach-Object { }
+[pscustomobject]@{
+  Ping     = Test-Connection $h -Count 2 -Quiet
+  RDP      = (Test-NetConnection $h -Port 3389 -WarningAction SilentlyContinue).TcpTestSucceeded
+  WinRM    = (Test-NetConnection $h -Port 5985 -WarningAction SilentlyContinue).TcpTestSucceeded
+} | Format-List`
+},
+{
+  id:'quick-assist', cat:'remoto', risk:'safe', lang:'url', title:'Quick Assist — assistência remota nativa do Windows',
+  desc:'Abre o Quick Assist (Windows 10/11). Você gera o código e digita no PC do usuário, ou ele gera e você conecta.',
+  tags:['quick assist','ajuda','nativo','10','11'],
+  body:'ms-quick-assist:'
+},
+{
+  id:'msra', cat:'remoto', risk:'safe', lang:'cmd', title:'Assistência Remota clássica (msra)',
+  desc:'Convida o usuário via Assistência Remota do Windows — ele aprova e você vê/toma controle.',
+  tags:['msra','assistencia','convidar'],
+  inputs:[{id:'host', label:'Host do usuário', ph:'PC-ABC123'}],
+  body:String.raw`msra /offerRA {{host}}`
+},
+{
+  id:'pssession', cat:'remoto', risk:'warn', lang:'ps', title:'Sessão PowerShell remota no PC do usuário',
+  desc:'Abre um prompt remoto com os direitos do usuário atual. O destino precisa ter WinRM habilitado.',
+  tags:['pssession','winrm','powershell','remoto'],
+  inputs:[
+    {id:'host', label:'Host', ph:'PC-ABC123'},
+    {id:'usuario', label:'Credencial (opcional)', ph:'empresa\\jsilva'}
+  ],
+  body:String.raw`Enter-PSSession -ComputerName {{host}} -Credential (Get-Credential)
+# sair: Exit-PSSession`
+},
+{
+  id:'winrm', cat:'remoto', risk:'warn', lang:'ps', title:'Habilitar WinRM no destino (PowerShell Remoting)',
+  desc:'Rode NO PC do usuário (admin) para liberar o acesso remoto via PowerShell.',
+  tags:['winrm','enable-psremoting','remoting'],
+  body:String.raw`Enable-PSRemoting -Force
+Set-NetFirewallRule -Name 'WINRM-HTTP-In-TCP' -RemoteAddress Any
+winrm get winrm/config
+Write-Host 'WinRM pronto para remoting' -ForegroundColor Green`
+},
+{
+  id:'psexec', cat:'remoto', risk:'danger', lang:'cmd', title:'CMD remoto com PsExec (Sysinternals)',
+  desc:'Abre um cmd no PC remoto com sessão SYSTEM. Ferramenta poderosa — só com autorização.',
+  tags:['psexec','sysinternals','system','cmd'],
+  inputs:[{id:'host', label:'Host', ph:'PC-ABC123'}],
+  body:String.raw`psexec.exe \\{{host}} -accepteula -s cmd.exe`
+},
+{
+  id:'wmi-exec', cat:'remoto', risk:'warn', lang:'cmd', title:'Executar processo remoto via WMI',
+  desc:'Dispara um comando no host remoto sem instalar nada (WMI/SMB). Não retorna a saída.',
+  tags:['wmi','wmic','remoto','exec'],
+  inputs:[
+    {id:'host', label:'Host', ph:'PC-ABC123'},
+    {id:'comando', label:'Comando', ph:'ipconfig /flushdns', def:'ipconfig /flushdns'}
+  ],
+  body:String.raw`wmic /node:{{host}} process call create "{{comando}}"`
+},
+{
+  id:'tasklist-remote', cat:'remoto', risk:'safe', lang:'cmd', title:'Listar processos do PC remoto',
+  desc:'Consulta processos do host remoto (SMB aberto). Bom para achar travamentos.',
+  tags:['tasklist','processo','remoto'],
+  inputs:[{id:'host', label:'Host', ph:'PC-ABC123'}],
+  body:String.raw`tasklist /s {{host}} /v`
+},
+{
+  id:'schtasks-remote', cat:'remoto', risk:'warn', lang:'cmd', title:'Agendar tarefa remota (executar script no PC do usuário)',
+  desc:'Cria e executa uma tarefa imediatamente no host remoto, rodando com privilégios locais.',
+  tags:['schtasks','tarefa','agendar','remoto'],
+  inputs:[
+    {id:'host', label:'Host', ph:'PC-ABC123'},
+    {id:'comando', label:'Comando', ph:'cmd /c gpupdate /force', def:'cmd /c gpupdate /force'}
+  ],
+  body:String.raw`schtasks /create /s {{host}} /tn "Suporte_Rapido" /tr "{{comando}}" /sc once /st 00:00 /ru SYSTEM /f
+schtasks /run /s {{host}} /tn "Suporte_Rapido"`
+},
+{
+  id:'qwinsta', cat:'remoto', risk:'safe', lang:'cmd', title:'Ver quem está logado no PC (sessões)',
+  desc:'Lista sessões locais ou remotas com ID — necessário antes de derrubar sessão travada.',
+  tags:['sessao','quser','qwinsta','logado'],
+  inputs:[{id:'host', label:'Host (vazio = local)', ph:'PC-ABC123'}],
+  body:String.raw`quser
+qwinsta /server:{{host}}`
+},
+{
+  id:'rwinsta', cat:'remoto', risk:'danger', lang:'cmd', title:'Derrubar sessão travada / desconectar usuário',
+  desc:'Encerra a sessão informada. Trabalho não salvo do usuário é perdido — avise antes.',
+  tags:['sessao','deslogar','travada','rwinsta'],
+  inputs:[
+    {id:'host', label:'Host', ph:'PC-ABC123'},
+    {id:'sessao', label:'ID da sessão', ph:'2', def:'2'}
+  ],
+  body:String.raw`rwinsta {{sessao}} /server:{{host}}`
+},
+{
+  id:'copy-remote', cat:'remoto', risk:'safe', lang:'cmd', title:'Copiar arquivo para/da máquina do usuário',
+  desc:'Usa o share administrativo C$ para enviar script, coletar log ou resguardar dados.',
+  tags:['robocopy','copiar','c$','share'],
+  inputs:[
+    {id:'host', label:'Host', ph:'PC-ABC123'},
+    {id:'arquivo', label:'Arquivo local', ph:'C:\\suporte\\script.ps1'}
+  ],
+  body:String.raw`copy {{arquivo}} \\{{host}}\C$\Windows\Temp\
+# pasta inteira:
+robocopy C:\suporte \\{{host}}\C$\Temp\suporte /E /R:1 /W:1`
+},
+{
+  id:'admin-share', cat:'remoto', risk:'warn', lang:'cmd', title:'Abrir o disco C$ do usuário no Explorer',
+  desc:'Acesso direto aos arquivos do PC remoto (exige credencial com admin local).',
+  tags:['explorer','admin share','c$','remoto'],
+  inputs:[{id:'host', label:'Host', ph:'PC-ABC123'}],
+  body:String.raw`explorer.exe \\{{host}}\C$`
+},
+{
+  id:'shutdown-remote', cat:'remoto', risk:'danger', lang:'cmd', title:'Reiniciar ou desligar o PC remoto',
+  desc:'Reinício remoto com aviso ao usuário (30 s). Use no fim de manutenção.',
+  tags:['reiniciar','desligar','shutdown','remoto'],
+  inputs:[
+    {id:'host', label:'Host', ph:'PC-ABC123'},
+    {id:'aviso', label:'Aviso (segundos)', ph:'30', def:'30'}
+  ],
+  body:String.raw`shutdown /m \\{{host}} /r /t {{aviso}} /c "Suporte: reinicio automatico em {{aviso}}s. Salve seu trabalho."
+# cancelar: shutdown /m \\{{host}} /a`
+},
+{
+  id:'portproxy', cat:'remoto', risk:'warn', lang:'cmd', title:'Encaminhar porta local → remota (portproxy)',
+  desc:'Tunel para acessar um serviço interno do usuário por SSH/localhost, sem mudar firewall.',
+  tags:['portproxy','tunel','forward','porta'],
+  inputs:[
+    {id:'ip', label:'IP alvo', ph:'10.0.1.55'},
+    {id:'porta', label:'Porta alvo', ph:'445', def:'445'},
+    {id:'portaL', label:'Porta local', ph:'8445', def:'8445'}
+  ],
+  body:String.raw`netsh interface portproxy add v4tov4 listenport={{portaL}} listenaddress=127.0.0.1 connectport={{porta}} connectaddress={{ip}}
+netsh interface portproxy show all`
+},
+{
+  id:'terceiros', cat:'remoto', risk:'safe', lang:'txt', title:'Links de ferramentas de terceiros (cheat sheet)',
+  desc:'Atalhos e URLs das ferramentas mais usadas no suporte. Copie e ajuste ao padrão da empresa.',
+  tags:['anydesk','teamviewer','rustdesk','wac','links'],
+  body:String.raw`Windows Admin Center : https://{{host}}:443
+Remote Utilities       : rutserv.exe na maquina do usuario
+TeamViewer QuickSupport: https://www.teamviewer.com/remote-support/
+AnyDesk                : anydesk.com  (adesk id = ID do usuario)
+RustDesk (gratuito)    : rustdesk.com
+RDP da nuvem           : windows.microsoft.com/pt-br/windows-remote-desktop
+Assistencia Microsoft  : https://support.microsoft`
+},
+/* ---------- SENHAS & CONTAS ---------- */
+{
+  id:'reset-ad', cat:'senha', risk:'warn', lang:'ps', title:'Resetar senha de conta no AD',
+  desc:'Define nova senha, garante conta habilitada e marca troca no próximo logon.',
+  tags:['senha','reset','ad','set-adaccountpassword'],
+  inputs:[
+    {id:'usuario', label:'Usuário (SAM)', ph:'jsilva'},
+    {id:'senha', label:'Senha temporária', ph:'Abc@123456'}
+  ],
+  body:String.raw`Set-ADAccountPassword -Identity {{usuario}} -Reset -NewPassword (ConvertTo-SecureString '{{senha}}' -AsPlainText -Force)
+Enable-ADAccount -Identity {{usuario}}
+Set-ADUser -Identity {{usuario}} -ChangePasswordAtLogon $true
+Get-ADUser {{usuario}} -Properties Enabled,PasswordNeverExpires,LockedOut |
+  Format-Table Name,Enabled,PasswordNeverExpires,LockedOut`
+},
+{
+  id:'reset-ad-aduc', cat:'senha', risk:'safe', lang:'txt', title:'Resetar senha pela interface (ADUC) — passo a passo',
+  desc:'Fluxo gráfico para quem não vai usar PowerShell. Idioma PT/EN.',
+  tags:['aduc','interface','passo','reset'],
+  body:String.raw`1. Win + R  ->  dsa.msc   (ou Gerenciamento de Contas de Usuario > Usuarios)
+2. Localize o usuario (Ctrl+F) > clique direito > "Redefinir senha..."
+3. Digite a nova senha 2x (confirme os requisitos da politica)
+4. Marque "O usuario deve alterar a senha no proximo logon"
+5. OK > Confirme > avise o usuario (senha vale so para o 1o acesso)
+6. Se a conta aparecer bloqueada: clique direito > Desbloquear conta`
+},
+{
+  id:'unlock-ad', cat:'senha', risk:'safe', lang:'ps', title:'Desbloquear conta no AD',
+  desc:'Remove o lockout imediatamente. Se voltar a bloquear, vá em Bloqueio de Conta.',
+  tags:['desbloquear','lockout','unlock','ad'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'jsilva'}],
+  body:String.raw`Unlock-ADAccount -Identity {{usuario}}
+Get-ADUser {{usuario}} -Properties LockedOut,LastBadPasswordAttempt,BadLogonTime |
+  Format-List Name,LockedOut,LastBadPasswordAttempt,BadLogonTime`
+},
+{
+  id:'force-change', cat:'senha', risk:'safe', lang:'ps', title:'Forçar troca de senha no próximo logon',
+  desc:'Deixa a senha temporária válida só para o primeiro acesso.',
+  tags:['troca','logon','expira','proxima'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'jsilva'}],
+  body:String.raw`Set-ADUser -Identity {{usuario}} -ChangePasswordAtLogon $true
+# voltar ao normal:
+# Set-ADUser -Identity {{usuario}} -ChangePasswordAtLogon $false`
+},
+{
+  id:'pwd-never-expires', cat:'senha', risk:'warn', lang:'ps', title:'Alternar expiração de senha (nunca expira / expira)',
+  desc:'Para contas de teste, exceções ou quando a politica nega a troca.',
+  tags:['expira','neverexpires','politica','senha'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'svc_backup'}],
+  body:String.raw`Set-ADUser -Identity {{usuario}} -PasswordNeverExpires $true   # nunca expira
+Set-ADUser -Identity {{usuario}} -PasswordNeverExpires $false  # volta a expirar`
+},
+{
+  id:'account-status', cat:'senha', risk:'safe', lang:'ps', title:'Diagnóstico completo da conta (status, senha, bloqueio)',
+  desc:'Tudo em uma tela: habilitada, bloqueada, expiração, último logon, senha antiga.',
+  tags:['status','diagnostico','get-aduser','conta'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'jsilva'}],
+  body:String.raw`Get-ADUser {{usuario}} -Properties * |
+  Select-Object Name,SamAccountName,Enabled,LockedOut,DistinguishedName,
+    PasswordLastSet,PasswordNeverExpires,PasswordExpired,LastLogonDate,
+    BadLogonTime,BadPwdCount,LastBadPasswordAttempt,WhenCreated |
+  Format-List`
+},
+{
+  id:'reset-local', cat:'senha', risk:'warn', lang:'ps', title:'Resetar senha de conta LOCAL do Windows',
+  desc:'Para PC fora do domínio ou quando o AD não é acessível. Requer admin local.',
+  tags:['local','net user','administrador','offline'],
+  inputs:[
+    {id:'usuario', label:'Conta local', ph:'Administrador'},
+    {id:'senha', label:'Nova senha', ph:'Abc@123456'}
+  ],
+  body:String.raw`net user {{usuario}} {{senha}}
+# habilitar a conta built-in Administrator se estiver oculta:
+net user Administrador /active:yes
+whoami /user   # confirme quem voce esta logado`
+},
+{
+  id:'pwd-bulk', cat:'senha', risk:'warn', lang:'ps', title:'Reset de senha em massa (lista CSV)',
+  desc:'CSV com coluna samAccountName. Ideal para onboarding/migração de lote.',
+  tags:['massa','csv','lote','bulk'],
+  inputs:[{id:'senha', label:'Senha padrão do lote', ph:'Abc@123456'}],
+  body:String.raw`$csv = Import-Csv .\usuarios.csv    # coluna: samAccountName
+foreach ($u in $csv){
+  Set-ADAccountPassword -Identity $u.samAccountName -Reset -NewPassword (ConvertTo-SecureString '{{senha}}' -AsPlainText -Force)
+  Enable-ADAccount -Identity $u.samAccountName
+  Set-ADUser -Identity $u.samAccountName -ChangePasswordAtLogon $true
+  Write-Host "OK $($u.samAccountName)" -ForegroundColor Green
+}`
+},
+{
+  id:'entra-reset', cat:'senha', risk:'warn', lang:'ps', title:'Resetar senha no Microsoft Entra ID / M365',
+  desc:'Conta nuvem (Microsoft 365). Requer Microsoft Graph e permissão de admin de usuários.',
+  tags:['entra','m365','azure','graph','cloud'],
+  inputs:[
+    {id:'usuario', label:'E-mail', ph:'jsilva@empresa.com'},
+    {id:'senha', label:'Senha temporária', ph:'Abc@123456'}
+  ],
+  body:String.raw`Connect-MgGraph -Scopes 'User.ReadWrite.All'
+Update-MgUser -UserId {{usuario}} -PasswordProfile @{Password='{{senha}}';ForceChangePasswordNextSignIn=$true}
+# contas bloqueadas em nuvem:
+Get-MgUser -Filter "accountEnabled eq false" | Select-Object DisplayName,UserPrincipalName`
+},
+{
+  id:'enable-ad', cat:'senha', risk:'safe', lang:'ps', title:'Habilitar conta desabilitada no AD',
+  desc:'Conta marcada como "desabilitada" no ADUC — comum após desligar por inatividade.',
+  tags:['habilitar','enable','desabilitada','conta'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'jsilva'}],
+  body:String.raw`Enable-ADAccount -Identity {{usuario}}
+Get-ADUser {{usuario}} -Properties Enabled | Select Name,Enabled | Format-Table`
+},
+{
+  id:'pwd-expiring', cat:'senha', risk:'safe', lang:'ps', title:'Relatório: senhas que expiram em X dias',
+  desc:'Dispara preventiva com o usuário antes do bloqueio/logon negado.',
+  tags:['relatorio','expiracao','proximas','aviso'],
+  inputs:[{id:'dias', label:'Dias limite', ph:'7', def:'7'}],
+  body:String.raw`$limite = (Get-Date).AddDays({{dias}})
+Get-ADUser -Filter {PasswordNeverExpires -eq $false} -Properties PasswordLastSet,EmailAddress |
+ Where-Object { $_.PasswordLastSet -and $_.PasswordLastSet -gt (Get-Date).AddDays(-400) } |
+ ForEach-Object {
+   $vence = $_.PasswordLastSet.AddDays(90)
+   if ($vence -le $limite){ [pscustomobject]@{ Usuario=$_.SamAccountName; Vence=$vence.ToString('dd/MM'); Email=$_.EmailAddress } }
+ } | Sort-Object Vence | Format-Table -AutoSize`
+},
+{
+  id:'wifi-pass', cat:'senha', risk:'warn', lang:'ps', title:'Recuperar senha Wi-Fi salva no PC',
+  desc:'Mostra a chave de rede já conectada. Útil quando o usuário esquece a senha do escritório.',
+  tags:['wifi','senha','netsh','rede'],
+  inputs:[{id:'ssid', label:'Nome da rede (SSID)', ph:'Empresa-Corp'}],
+  body:String.raw`netsh wlan show profile name="{{ssid}}" key=clear
+# todas as redes salvas:
+netsh wlan show profiles
+(Get-NetConnectionProfile).Name`
+},
+{
+  id:'cred-manager', cat:'senha', risk:'safe', lang:'cmd', title:'Ver credenciais salvas no Gerenciador de Credenciais',
+  desc:'Lista entradas salvas (VPN, share, RDP) — o usuário pode ter a senha antiga salva ali.',
+  tags:['credencial','cmdkey','vpn','salvo'],
+  body:String.raw`cmdkey /list
+# remover uma entrada especifica:
+# cmdkey /delete:TERMSRV/10.0.1.55
+# painel grafico:
+control keymgr.dll`
+},
+{
+  id:'browser-pass', cat:'senha', risk:'safe', lang:'url', title:'Senhas salvas no Chrome / Edge',
+  desc:'Abre o cofre de senhas do navegador (o usuário digita a senha do Windows para liberar).',
+  tags:['senha','navegador','chrome','edge','cofre'],
+  body:'edge://settings/passwords'
+},
+{
+  id:'ms-reset', cat:'senha', risk:'safe', lang:'url', title:'Recuperar conta Microsoft / e-mail de recuperação',
+  desc:'Página oficial de recuperação quando o usuário perdeu o acesso à conta pessoal ou corporativa.',
+  tags:['microsoft','recuperar','conta','reset'],
+  body:'https://account.live.com/password/reset'
+},
+{
+  id:'gen-pass', cat:'senha', risk:'safe', lang:'ps', title:'Gerador de senha compatível com a maioria das políticas',
+  desc:'16 caracteres, maiúscula + minúscula + número + símbolo, sem caracteres ambíguos.',
+  tags:['gerador','gerar','forte','politica'],
+  body:String.raw`-join (1..16 | ForEach-Object {
+  'ABCDEFGHJKLMNPQRSTUVWXYZ','abcdefghijkmnopqrstuvwxyz','23456789','@#$%&*!?-_' |
+  Get-Random -Count 1 | ForEach-Object { (Get-Random -InputObject $_.ToCharArray()) }
+})
+# versao com requisito minimo de 3 grupos garantidos:
+$base = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%&*!?-_'
+-join (1..16 | ForEach-Object { $base[(Get-Random -Maximum $base.Length)] })`
+},
+{
+  id:'gen-pass2', cat:'senha', risk:'safe', lang:'ps', title:'Gerador de senha com frase (memorizável e forte)',
+  desc:'Passfrase de 4 palavras — fácil de dizer por telefone ao usuário.',
+  tags:['frase','passphrase','memoravel','telefone'],
+  body:String.raw`$a = 'casa','porta','nuvem','faca','prato','verde','luz','farol','rio','serra','bola','gato'
+$p = 1..4 | ForEach-Object { $a | Get-Random }
+"$($p[0])-$($p[1])-$($p[2])-$($p[2])$(Get-Random -Minimum 10 -Maximum 99)"
+# 4 palavras + 2 digitos costuma atender politicas de complexidade`
+},
+{
+  id:'klist-purge', cat:'senha', risk:'safe', lang:'ps', title:'Limpar tíquete Kerberos (senha antiga na memória)',
+  desc:'Depois de trocar a senha, o usuário pode continuar recebendo erro por causa do tíquete antigo.',
+  tags:['kerberos','klist','ticket','limpar'],
+  body:String.raw`klist purge
+klist
+ipconfig /flushdns
+# force o logoff/logon para aplicar totalmente`
+},
+{
+  id:'wifi-clear', cat:'senha', risk:'safe', lang:'cmd', title:'Esquecer rede Wi-Fi (senha salva errada)',
+  desc:'Remove perfil de rede salvo quando a senha antiga faz o PC se reconectar e falhar.',
+  tags:['wifi','esquecer','perfil','rede'],
+  inputs:[{id:'ssid', label:'SSID', ph:'Empresa-Corp'}],
+  body:String.raw`netsh wlan delete profile name="{{ssid}}"
+netsh wlan show profiles`
+},
+{
+  id:'script-logon', cat:'senha', risk:'warn', lang:'ps', title:'Coletar dados do usuário antes do atendimento',
+  desc:'Gera um snapshot (usuário, domínio, host, IP, grupo, sessão) para colar no chamado.',
+  tags:['coleta','snapshot','diagnostico','chamado'],
+  body:String.raw`$u = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+[pscustomobject]@{
+  Usuario   = $u
+  Computador= $env:COMPUTERNAME
+  Dominio   = (Get-CimInstance Win32_ComputerSystem).Domain
+  UsuarioLog= (Get-CimInstance Win32_ComputerSystem).UserName
+  IP        = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '127.*'} | Select -First 1).IPAddress
+  DominioOk = (Test-ComputerSecureChannel)
+  OS        = (Get-CimInstance Win32_OperatingSystem).Caption
+  Boot      = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+} | Format-List
+Get-NetConnectionProfile | Select-Object Name,IPv4Connectivity`
+},
+/* ---------- BLOQUEIO DE CONTA ---------- */
+{
+  id:'pdc', cat:'bloqueio', risk:'safe', lang:'ps', title:'Descobrir o DC (PDC Emulator) do domínio',
+  desc:'O lockout sempre é registrado no DC que autentica — comece por aqui.',
+  tags:['pdc','fsmo','dc','dominio'],
+  body:String.raw`netdom query fsmo
+(Get-ADDomain).PDCEmulator
+(Get-ADDomainController -Filter *).HostName | Sort-Object`
+},
+{
+  id:'evt-4740', cat:'bloqueio', risk:'safe', lang:'ps', title:'Quem bloqueou? Evento 4740 no controlador',
+  desc:'Mostra a conta bloqueada e o PC de origem (Caller Computer Name). Rode no DC ou remoto.',
+  tags:['4740','lockout','evento','bloqueio'],
+  inputs:[{id:'dc', label:'DC (vazio = local)', ph:'dc01.empresa.local'}],
+  body:String.raw`$dc = '{{dc}}'
+$filter = @{ LogName='Security'; Id=4740; StartTime=(Get-Date).AddDays(-3) }
+Get-WinEvent -FilterHashtable $filter -ComputerName $dc |
+ ForEach-Object {
+   $x = [xml]$_.ToXml()
+   [pscustomobject]@{
+     Hora      = $_.TimeCreated
+     Conta     = $x.EventData.Data[0].'#text'
+     Origem    = $x.EventData.Data[1].'#text'
+     Msg       = $_.Message
+   }
+ } | Format-List`
+},
+{
+  id:'evt-badpwd', cat:'bloqueio', risk:'safe', lang:'ps', title:'De onde vem a senha errada (4771 / 4625)',
+  desc:'Eventos de falha de logon com IP e workstation de origem — aponta o dispositivo com senha velha.',
+  tags:['4771','4625','falha','origem','ip'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'jsilva'}],
+  body:String.raw`$u = '{{usuario}}'
+Get-WinEvent -FilterHashtable @{ LogName='Security'; Id=4771,4625; StartTime=(Get-Date).AddDays(-2) } -ComputerName (Get-ADDomain).PDCEmulator |
+ Where-Object { $_.Message -match $u } |
+ Select-Object TimeCreated,Id,@{n='Detalhe';e={(([regex]::Split($_.Message,"\r?\n") | Where-Object { $_ -match 'Address|Workstation|Conta|Source' }) -join ' | ')}} |
+ Format-Table -Wrap`
+},
+{
+  id:'badpwdcount', cat:'bloqueio', risk:'safe', lang:'ps', title:'Ver BadPwdCount e última tentativa falha',
+  desc:'Conta ainda com tentativas restantes? Último erro quando? Fecha a questão em segundos.',
+  tags:['badpwdcount','tentativas','ultima','bloqueado'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'jsilva'}],
+  body:String.raw`Get-ADUser {{usuario}} -Properties BadPwdCount,BadLogonTime,LastBadPasswordAttempt,LockedOut,lockoutTime |
+ Format-List Name,LockedOut,BadPwdCount,BadLogonTime,LastBadPasswordAttempt,lockoutTime
+Get-ADDefaultDomainPasswordPolicy |
+ Format-List LockoutThreshold,LockoutDuration,LockoutObservationWindow,ComplexityEnabled,MinPasswordLength`
+},
+{
+  id:'unlock-mass', cat:'bloqueio', risk:'safe', lang:'ps', title:'Desbloquear todas as contas bloqueadas do domínio',
+  desc:'Depois de um incidente (ex.: serviço com senha antiga) destrava todo mundo de uma vez.',
+  tags:['desbloquear','massa','todas','lockout'],
+  body:String.raw`Search-ADAccount -LockedOut | ForEach-Object {
+  Unlock-ADAccount -Identity $_.SamAccountName
+  Write-Host "Liberado: $($_.SamAccountName)" -ForegroundColor Green
+}
+Search-ADAccount -LockedOut   # deve voltar vazio`
+},
+{
+  id:'policy-lockout', cat:'bloqueio', risk:'safe', lang:'ps', title:'Consultar política de bloqueio e complexidade',
+  desc:'Threshold, duração e janela de observação — explica por que o usuário bloqueia tão rápido.',
+  tags:['politica','threshold','lockout','gpresult'],
+  body:String.raw`Get-ADDefaultDomainPasswordPolicy |
+  Select-Object MinPasswordLength,PasswordHistoryCount,ComplexityEnabled,
+    LockoutThreshold,LockoutDuration,LockoutObservationWindow | Format-List
+# na estacao:
+net accounts`
+},
+{
+  id:'clear-stale-creds', cat:'bloqueio', risk:'warn', lang:'ps', title:'Limpar credenciais salvas com senha antiga (PC do usuário)',
+  desc:'Causa nº 1 de bloqueio: credencial salva no Windows/Outlook/compartilhamento usando a senha antiga.',
+  tags:['credencial','cmdkey','limpar','antiga','outlook'],
+  body:String.raw`cmdkey /list
+Get-SmbConnection -ErrorAction SilentlyContinue
+Get-SmbMapping | Remove-SmbMapping -Force -ErrorAction SilentlyContinue
+Get-CimInstance Win32_MappedLogicalDisk | ForEach-Object { net use $_.Device /delete /y }
+control keymgr.dll
+cmdkey /delete:LegacyGeneric:target:<dominio>\<usuario>
+Write-Host 'Apos limpar, faca logoff/logon' -ForegroundColor Yellow`
+},
+{
+  id:'sync-mail-phones', cat:'bloqueio', risk:'warn', lang:'txt', title:'Celular / Outlook / aplicativo reenviando senha antiga',
+  desc:'Fluxo de investigação quando o bloqueio se repete mesmo após a troca de senha.',
+  tags:['celular','outlook','mail','sync','app'],
+  body:String.raw`SINTOMA: bloqueio volta a cada poucos minutos apos o reset.
+CAUSAS COMUNS:
+  1. Celular com app de e-mail (OWA/EAS/Outlook mobile) com a senha antiga salva
+  2. Outlook/Teams aberto em outro PC ou maquina virtual
+  3. Tarefa agendada / servico rodando com credencial antiga (services.msc, tarefas)
+  4. Mapeamento de unidade / impressora de rede com credencial antiga
+  5. Agendador de correo, ERP, citrix, VPN com credencial propria
+DIAGNOSTICO:
+  Get-WinEvent -FilterHashtable @{LogName='Security';Id=4625} -MaxEvents 50 |
+    Where-Object { $_.Message -match '<usuario>' } | Format-List TimeCreated,Message
+ACOES:
+  - Localizar o IP/workstation nos eventos 4771/4625
+  - Remover a senha salva no dispositivo (keymgr / app de mail)
+  - Ao desbloquear, fazer o usuario trocar a senha no PC e redesenhar o e-mail`
+},
+{
+  id:'cred-verify', cat:'bloqueio', risk:'warn', lang:'ps', title:'Testar se a credencial da máquina confere com o AD',
+  desc:'Detecta máquina com senha de maquina desatualizada (causa comum de falha em domínio).',
+  tags:['securechannel','netdom','verificar','maquina'],
+  inputs:[{id:'host', label:'Host', ph:'PC-ABC123'}],
+  body:String.raw`Test-ComputerSecureChannel -ComputerName {{host}} -Verbose
+nltest /sc_verify:{{host}}   # ou: nltest /sc_verify:dominio.local
+Test-ComputerSecureChannel -Repair -Credential (Get-Credential)`
+},
+{
+  id:'checklist-bloqueio', cat:'bloqueio', risk:'safe', lang:'txt', title:'Checklist rápido de atendimento de bloqueio',
+  desc:'Ordem operacional recomendada — a versão clicável está na aba Checklists.',
+  tags:['checklist','fluxo','procedimento','bloqueio'],
+  body:String.raw`1. Confirmar identidade do usuario (ramal + gestor, conforme politica)
+2. netdom query fsmo  -> descobrir o DC (PDC Emulator)
+3. Get-ADUser <usuario> -Properties LockedOut,BadPwdCount,LastBadPasswordAttempt
+4. Evento 4740 no DC -> anotar a ORIGEM (PC/celular que causou)
+5. Evento 4625/4771 -> anotar IP e horario do erro
+6. Desbloquear: Unlock-ADAccount
+7. Resetar a senha + ChangePasswordAtLogon
+8. Limpar credenciais salvas no PC do usuario (cmdkey/keymgr) e nos apps
+9. Pedir logoff/logon e teste de acesso (rede, e-mail, ERP)
+10. Registrar tudo no chamado (origem, causa, acao tomada)`
+},
+/* ---------- ACTIVE DIRECTORY ---------- */
+{
+  id:'gpupdate', cat:'ad', risk:'safe', lang:'cmd', title:'Atualizar Política de Grupo na hora',
+  desc:'Aplica qualquer mudança de GPO sem reiniciar. Rode com /force quando o usuário reclama que "não pegou".',
+  tags:['gpupdate','gpo','politica','forcar'],
+  body:String.raw`gpupdate /force
+gpresult /r
+# relatorio HTML detalhado:
+gpresult /h %USERPROFILE%\Desktop\gpresult.html /f`
+},
+{
+  id:'gpresult', cat:'ad', risk:'safe', lang:'ps', title:'Ver GPO aplicadas na estação/usuário',
+  desc:'Lista as políticas efetivas e aponta se alguma falhou por permissão.',
+  tags:['gpresult','gpo','aplicada','politica'],
+  body:String.raw`gpresult /r /scope:computer
+gpresult /r /scope:user
+# lista de GPOs vinculadas a um objeto:
+(Get-GPResultantSetOfPolicy -User (whoami) -ReportType Html -Path .\rsop.html) | Out-Null
+Start-Process .\rsop.html`
+},
+{
+  id:'rejoin', cat:'ad', risk:'danger', lang:'ps', title:'Reingressar no domínio / reparar canal seguro',
+  desc:'Quando "não é possível encontrar o domínio" ou o canal seguro quebrou. Pode exigir reinício.',
+  tags:['rejoin','dominio','securechannel','trust'],
+  inputs:[
+    {id:'dominio', label:'Domínio', ph:'empresa.local'},
+    {id:'host', label:'Host', ph:'PC-ABC123'}
+  ],
+  body:String.raw`# 1) tentativa simples (sem reiniciar):
+Test-ComputerSecureChannel -Repair -Verbose
+
+# 2) se falhar, remover e voltar ao dominio:
+Remove-Computer -UnjoinDomainCredential (Get-Credential) -Force -PassThru | Rename-Computer -NewName {{host}} -Force
+Add-Computer -DomainName {{dominio}} -Credential (Get-Credential) -Force -Restart
+
+# conferir:
+nltest /dsgetdc:{{dominio}}
+netdom verify {{host}} /domain:{{dominio}}`
+},
+{
+  id:'dcdiag', cat:'ad', risk:'safe', lang:'cmd', title:'Diagnóstico de saúde do controlador (dcdiag)',
+  desc:'Verifica DNS, SYSVOL, replicação e serviços do DC. Rode no DC (RSAT instalado).',
+  tags:['dcdiag','dc','saude','controlador'],
+  body:String.raw`dcdiag /v /c /d /e /s:dc01 > %TEMP%\dcdiag.txt
+notepad %TEMP%\dcdiag.txt`
+},
+{
+  id:'repadmin', cat:'ad', risk:'safe', lang:'cmd', title:'Verificar replicação do AD (repadmin)',
+  desc:'Se o DCs divergem, o usuário pode ser bloqueado/desbloqueado só em um lado.',
+  tags:['repadmin','replicacao','dc','sync'],
+  body:String.raw`repadmin /replsummary
+repadmin /showrepl
+repadmin /syncall /AdeP
+nltest /dsgetdc:dominio.local /force`
+},
+{
+  id:'dns-srv', cat:'ad', risk:'safe', lang:'ps', title:'Testar se o cliente acha o DC via DNS (registros SRV)',
+  desc:'Diagnóstico clássico de "não é possível encontrar o domínio" / erro 53.',
+  tags:['dns','srv','ldap','dominio'],
+  inputs:[{id:'dominio', label:'Domínio', ph:'empresa.local'}],
+  body:String.raw`Resolve-DnsName -Type SRV _ldap._tcp.dc._msdcs.{{dominio}}
+Resolve-DnsName -Type SRV _kerberos._tcp.{{dominio}}
+nslookup -type=SRV {{dominio}}
+nltest /dsgetdc:{{dominio}} /force
+Get-DnsClientServerAddress | Select InterfaceAlias,ServerAddresses`
+},
+{
+  id:'find-user-pc', cat:'ad', risk:'safe', lang:'ps', title:'Descobrir em qual PC o usuário está logado',
+  desc:'Localiza a máquina do usuário no AD para conectar remotamente.',
+  tags:['logonworkstation','pc','localizar','usuario'],
+  inputs:[{id:'usuario', label:'Usuário', ph:'jsilva'}],
+  body:String.raw`Get-ADUser {{usuario}} -Properties logonWorkstation,LastLogonDate,MemberOf |
+  Format-List Name,logonWorkstation,LastLogonDate
+# varredura rapida (requer permissao):
+quser /server:{{usuario}} 2>$null
+Get-ADComputer -Filter * -Properties LastLogonDate |
+  Where-Object { $_.LastLogonDate -gt (Get-Date).AddDays(-2) } |
+  Sort LastLogonDate -Desc | Select -First 20 Name,LastLogonDate | Format-Table`
+},
+{
+  id:'search-ad', cat:'ad', risk:'safe', lang:'ps', title:'Buscar usuário / computador no AD',
+  desc:'Pesquisa por nome, e-mail ou parte do nome antes de mexer na conta.',
+  tags:['buscar','pesquisa','get-aduser','filtro'],
+  inputs:[{id:'busca', label:'Texto da busca', ph:'silva'}],
+  body:String.raw`Get-ADUser -Filter "Name -like '*{{busca}}*' -or Mail -like '*{{busca}}*'" -Properties EmailAddress,Enabled |
+  Select Name,SamAccountName,EmailAddress,Enabled | Format-Table -AutoSize
+
+# computadores:
+Get-ADComputer -Filter "Name -like '*{{busca}}*'" -Properties LastLogonDate |
+  Select Name,LastLogonDate | Format-Table`
+},
+{
+  id:'group-members', cat:'ad', risk:'safe', lang:'ps', title:'Membros de um grupo / grupos de um usuário',
+  desc:'Conferir se o usuário está no grupo certo (suporte, VPN, administradores local).',
+  tags:['grupo','membro','memberof','permissao'],
+  inputs:[{id:'grupo', label:'Grupo ou usuário', ph:'VPN-Users'}],
+  body:String.raw`Get-ADGroupMember -Identity '{{grupo}}' -Recursive |
+  Select Name,SamAccountName | Format-Table -AutoSize
+
+# grupos do usuario:
+(Get-ADUser {{grupo}} -Properties MemberOf).MemberOf | ForEach-Object { (Get-ADGroup $_).Name }`
+},
+{
+  id:'inactive', cat:'ad', risk:'safe', lang:'ps', title:'Relatório de contas/computadores inativos',
+  desc:'Higienização de AD: achado = conta esquecida que gera ruído e risco.',
+  tags:['inativo','relatorio','limpeza','auditoria'],
+  inputs:[{id:'dias', label:'Inativos há (dias)', ph:'90', def:'90'}],
+  body:String.raw`$d = (Get-Date).AddDays(-{{dias}})
+'--- contas de usuario ---'
+Get-ADUser -Filter {Enabled -eq $true} -Properties LastLogonDate |
+  Where-Object { $_.LastLogonDate -and $_.LastLogonDate -lt $d } |
+  Select SamAccountName,LastLogonDate | Sort LastLogonDate | Format-Table
+'--- computadores ---'
+Get-ADComputer -Filter {Enabled -eq $true} -Properties LastLogonDate |
+  Where-Object { $_.LastLogonDate -and $_.LastLogonDate -lt $d } |
+  Select Name,LastLogonDate | Sort LastLogonDate | Format-Table`
+},
+{
+  id:'profile-corrupt', cat:'ad', risk:'warn', lang:'ps', title:'Remover perfil de usuário corrompido',
+  desc:'Para erros de "não é possível carregar o perfil" ou área de trabalho sempre limpa.',
+  tags:['perfil','corrompido','profile','carregar'],
+  inputs:[{id:'host', label:'Host', ph:'PC-ABC123'}],
+  body:String.raw`# na propria maquina (admin):
+Get-CimInstance Win32_UserProfile | Where-Object { $_.LocalPath -like 'C:\Users\*' } |
+  Select-Object LocalPath,LastUseTime,Roaming,Special
+# apagar o perfil problemático (confirme o caminho!):
+Remove-CimInstance -InputObject (Get-CimInstance Win32_UserProfile | Where-Object LocalPath -eq 'C:\Users\jsilva')
+# ou via registro:
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" /f /v ProfileImagePath`
+},
+{
+  id:'sysvol', cat:'ad', risk:'safe', lang:'cmd', title:'Conferir SYSVOL / NETLOGON (política não aplica)',
+  desc:'Se os shares SYSVOL/NETLOGON faltarem, nenhuma GPO é aplicada na estação.',
+  tags:['sysvol','netlogon','share','gpo'],
+  inputs:[{id:'dominio', label:'Domínio', ph:'empresa.local'}],
+  body:String.raw`net view \\{{dominio}} /all
+dir \\{{dominio}}\SYSVOL
+dir \\{{dominio}}\NETLOGON
+net share`
+},
+{
+  id:'time-sync', cat:'ad', risk:'warn', lang:'cmd', title:'Sincronizar relógio (erro de Kerberos > 5 min)',
+  desc:'Diferença de data/hora acima de 5 minutos quebra autenticação de domínio.',
+  tags:['relogio','time','w32tm','kerberos','hora'],
+  body:String.raw`w32tm /query /status
+w32tm /config /syncfromflags:domhier /update
+net stop w32time && net start w32time
+w32tm /resync /force
+w32tm /stripchart /computer:%LOGONSERVER:\% /samples:3 /dataonly`
+},
+{
+  id:'net-use', cat:'ad', risk:'safe', lang:'cmd', title:'Mapear unidade / testar acesso a share',
+  desc:'Confere credencial para compartilhamento, pastas e impressora de rede.',
+  tags:['net use','share','mapear','unidade'],
+  inputs:[
+    {id:'host', label:'Servidor', ph:'files01'},
+    {id:'senha', label:'Senha (opcional)', ph:''}
+  ],
+  body:String.raw`net use
+net use * \\{{host}}\compartilhamento /user:{{dominio}}\{{usuario}}
+# remover todos e refazer (limpa credencial antiga):
+net use * /delete /y
+net use Z: \\{{host}}\compartilhamento /persistent:no`
+},
+{
+  id:'err-domain', cat:'ad', risk:'safe', lang:'txt', title:'Cheat sheet: erros de domínio e o que fazer',
+  desc:'Decodificador rápido dos erros mais comuns de logon/AD.',
+  tags:['erro','logon','dominio','cheat'],
+  body:String.raw`"O computador nao encontra o dominio"  -> DNS/SRV, hora, canal seguro (rejoin)
+Erro 53 (caminho nao encontrado)        -> SMB/bloqueio, IP errado, firewall 445
+Erro 5 (acesso negado)                  -> GPO de permissao, conta no grupo certo
+"Senha expirou"                         -> trocar e aplicar ChangePasswordAtLogon
+"Sua conta esta bloqueada"              -> Unlock-ADAccount + achar origem do 4740
+Erro 1326/1331 (credencial)             -> credencial salva antiga (cmdkey)
+Login lento (minutos)                   -> DNS primario caindo para IP invalido
+Perfil nao carrega                      -> perfil corrompido / quota de disco
+Office pede senha continuamente         -> token moderno: sair de todas as contas
+Erro Kerberos KRB_AP_ERR_MODIFIED       -> hora fora de sincronia / SPN duplicado`
+},
+/* ---------- NAVEGADOR & CACHE ---------- */
+{
+  id:'nav-clear', cat:'navegador', risk:'safe', lang:'ps', title:'Fechar navegador e limpar cache/temporários',
+  desc:'Fecha Chrome/Edge/Firefox, apaga cache e cookies do perfil padrão e reabre. Roda no PC do usuário.',
+  tags:['cache','limpar','chrome','edge','cookies'],
+  inputs:[{id:'navegador', label:'Navegador', ph:'chrome', def:'chrome'}],
+  body:String.raw`# --- fechar {{navegador}} ---
+Get-Process chrome,msedge,firefox -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# --- Chrome / Edge (ajuste o caminho) ---
+$c = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default"
+$e = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default"
+foreach ($p in $c,$e){
+  if (Test-Path $p){
+    Remove-Item "$p\Cache\*","$p\Code Cache\*","$p\GPUCache\*" -Recurse -Force -EA SilentlyContinue
+    Remove-Item "$p\Cookies","$p\Login Data","$p\History" -Force -EA SilentlyContinue
+  }
+}
+# --- Firefox ---
+$f = "$env:LOCALAPPDATA\Mozilla\Firefox\Profiles"
+Get-ChildItem $f -Directory -EA SilentlyContinue | ForEach-Object {
+  Remove-Item "$($_.FullName)\cache2\*","$($_.FullName)\cookies.sqlite*" -Recurse -Force -EA SilentlyContinue
+}
+Write-Host 'Cache limpo. Reabra o navegador.' -ForegroundColor Green`
+},
+{
+  id:'nav-clear-links', cat:'navegador', risk:'safe', lang:'url', title:'Abrir a tela de limpeza do navegador',
+  desc:'Abre a página nativa de "Limpar dados de navegação" (Ctrl+Shift+Del) no navegador do usuário.',
+  tags:['limpar','dados','navegacao','ctrl+shift+del'],
+  body:'edge://settings/clearBrowserData'
+},
+{
+  id:'nav-cache-cmd', cat:'navegador', risk:'warn', lang:'cmd', title:'Apagar só o cache em disco (sem perder senhas/login)',
+  desc:'Limpa apenas arquivos de cache — mantém cookies, senhas e histórico. Menos invasivo.',
+  tags:['cache','cmd','semperder','login'],
+  body:String.raw`del /f /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache\*"
+del /f /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache\*"
+del /f /q "%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Cache\*"
+del /f /q "%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Code Cache\*"
+del /f /q "%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*\cache2\*"
+ipconfig /flushdns`
+},
+{
+  id:'nav-profile-rename', cat:'navegador', risk:'warn', lang:'cmd', title:'Navegador corrompido: criar perfil novo preservando dados',
+  desc:'Renomeia a pasta Default — o navegador cria um perfil limpo e você recupera dados do antigo depois.',
+  tags:['perfil','corrompido','default','renomear'],
+  body:String.raw`taskkill /f /im msedge.exe & taskkill /f /im chrome.exe
+
+# Chrome:
+ren "%LOCALAPPDATA%\Google\Chrome\User Data\Default" Default.old
+# Edge:
+ren "%LOCALAPPDATA%\Microsoft\Edge\User Data\Default" Default.old
+
+start msedge
+REM depois, para resgatar favoritos/senhas:
+REM copie Bookmarks, "Login Data" e Favorites de Default.old para o novo Default`
+},
+{
+  id:'nav-clean-start', cat:'navegador', risk:'safe', lang:'cmd', title:'Abrir navegador em modo limpo (sem extensões/perfil)',
+  desc:'Isolamento rápido: se abrir em modo limpo dá certo, o problema é extensão/perfil.',
+  tags:['modo','limpo','extensao','isolamento','debug'],
+  body:String.raw`# Chrome sem extensoes e sem cache:
+chrome.exe --disable-extensions --disable-gpu --incognito
+
+# Edge com perfil novo em pasta temporaria:
+msedge.exe --user-data-dir="%TEMP%\edge-test"
+
+# Chrome com perfil novo:
+chrome.exe --user-data-dir="%TEMP%\chrome-test"
+
+# console de erros do navegador:
+chrome.exe --enable-logging --v=1`
+},
+{
+  id:'nav-extensions', cat:'navegador', risk:'safe', lang:'url', title:'Gerenciar extensões (tarefa do navegador)',
+  desc:'Abre a lista de extensões — Shift+Esc abre o gerenciador de processos do navegador.',
+  tags:['extensao','extension','tarefa','processo'],
+  body:'edge://extensions/'
+},
+{
+  id:'nav-policy', cat:'navegador', risk:'warn', lang:'ps', title:'Ver se há política de navegação aplicada (registro)',
+  desc:'GPO pode travar homepage, extensões e proxy. Verifica as chaves de política do Chrome/Edge.',
+  tags:['politica','gpo','registro','home'],
+  body:String.raw`$keys = @(
+ 'HKLM:\SOFTWARE\Policies\Google\Chrome',
+ 'HKLM:\SOFTWARE\Policies\Microsoft\Edge',
+ 'HKCU:\SOFTWARE\Policies\Google\Chrome',
+ 'HKCU:\SOFTWARE\Policies\Microsoft\Edge'
+)
+foreach ($k in $keys){
+  if (Test-Path $k){ Write-Host "ENCONTRADO: $k" -ForegroundColor Yellow; Get-Item $k | Select -ExpandProperty Property }
+}
+gpresult /h %TEMP%\gp.html /f ; Start-Process %TEMP%\gp.html`
+},
+{
+  id:'nav-firefox-refresh', cat:'navegador', risk:'warn', lang:'url', title:'Restaurar o Firefox (about:support)',
+  desc:'Botão "Restaurar o Firefox" devolve o padrão sem apagar senhas, favoritos e abas abertas.',
+  tags:['firefox','refresh','restaurar','about:support'],
+  body:'about:support'
+},
+{
+  id:'nav-update', cat:'navegador', risk:'safe', lang:'ps', title:'Atualizar navegadores pela linha de comando',
+  desc:'Força a atualização — versão velha é causa frequente de site quebrado e travamento.',
+  tags:['atualizar','update','versao','winget'],
+  body:String.raw`winget upgrade --id Google.Chrome --silent --accept-source-agreements
+winget upgrade --id Microsoft.Edge --silent
+winget upgrade --id Mozilla.Firefox --silent
+# versoes instaladas:
+Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' |
+  Where-Object DisplayName -match 'Chrome|Edge|Firefox' |
+  Select DisplayName,DisplayVersion | Format-Table -AutoSize`
+},
+{
+  id:'nav-site-blocked', cat:'navegador', risk:'safe', lang:'ps', title:'Site não abre: diagnosticar fora do navegador',
+  desc:'Separa problema de DNS, proxy, TLS ou bloqueio — antes de culpar o navegador.',
+  tags:['site','naoabre','bloqueado','https'],
+  inputs:[{id:'site', label:'Site', ph:'portal.empresa.com.br'}],
+  body:String.raw`Resolve-DnsName {{site}} -ErrorAction SilentlyContinue
+Test-NetConnection {{site}} -Port 443 -InformationLevel Detailed
+Test-NetConnection {{site}} -Port 80
+netsh winhttp show proxy
+Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' |
+  Select ProxyEnable,ProxyServer,AutoConfigURL
+curl.exe -I https://{{site}}`
+},
+{
+  id:'nav-restore-session', cat:'navegador', risk:'safe', lang:'txt', title:'Recuperar abas/favoritos de um perfil antigo',
+  desc:'Como resgatar dados quando o perfil foi renomeado ou o navegador foi resetado.',
+  tags:['recuperar','abas','favoritos','historico'],
+  body:String.raw`CHROME (User Data\Default):
+  Bookmarks, Bookmarks.bak   -> favoritos
+  Login Data                 -> senhas (criptografadas no Windows DPAPI)
+  History                    -> historico
+  Sessions\                  -> abas abertas
+EDGE  (User Data\Default):
+  Favorites                  -> favoritos
+  Login Data, History
+FIREFOX (Profiles\<perfil>):
+  places.sqlite              -> favoritos + historico
+  logins.json + key4.db      -> senhas
+COPIA: feche o navegador, copie os arquivos para o novo perfil e reabra.
+NAVEGADOR TAMBEM TEM "EXPORTAR DADOS" (3 pontos > Favoritos > Importar).`
+},
+/* ---------- REDE ---------- */
+{
+  id:'net-diag', cat:'rede', risk:'safe', lang:'ps', title:'Diagnóstico de rede completo (1 comando)',
+  desc:'IP, gateway, DNS, conectividade, Wi-Fi e rotas em um relatório só. Comece sempre por aqui.',
+  tags:['diagnostico','ip','dns','gateway','wifi'],
+  body:String.raw`'--- adaptadores ---'
+Get-NetIPConfiguration | Format-List InterfaceAlias,IPv4Address,IPv4DefaultGateway,DnsServer
+'--- conectividade ---'
+Get-NetConnectionProfile | Select Name,IPv4Connectivity,NetworkCategory
+'--- internet x DNS ---'
+Test-NetConnection 8.8.8.8 -Port 443 -WarningAction SilentlyContinue | Select ComputerName,RemoteAddress,TcpTestSucceeded
+Resolve-DnsName www.microsoft.com -EA SilentlyContinue
+'--- wifi ---'
+netsh wlan show interfaces
+'--- rotas / saltos ---'
+Get-NetRoute -AddressFamily IPv4 | Sort-Object RouteMetric |
+  Select-Object InterfaceAlias,DestinationPrefix,NextHop,RouteMetric | Format-Table -AutoSize
+'--- portas abertas locais ---'
+netstat -ano | Select-String LISTENING | Select-Object -First 15
+`
+},
+{
+  id:'flush-dns', cat:'rede', risk:'safe', lang:'cmd', title:'Limpar cache de DNS (cliente)',
+  desc:'Resolve IP velho, site "não encontrado" logo após migração e falha ao abrir servidor interno.',
+  tags:['flushdns','dns','cache','ipconfig'],
+  body:String.raw`ipconfig /flushdns
+ipconfig /registerdns
+ipconfig /displaydns | findstr /c:"Entrada" | more +0
+# limpar o cache do cliente Windows (servidor):
+# Clear-DnsServerCache`
+},
+{
+  id:'ping-trace', cat:'rede', risk:'safe', lang:'cmd', title:'Ping + traceroute + perda de pacotes',
+  desc:'Descobre onde a rota quebra: gateway, DNS, servidor ou internet.',
+  tags:['ping','tracert','pathping','rota'],
+  inputs:[{id:'alvo', label:'Alvo', ph:'8.8.8.8'}],
+  body:String.raw`ping -n 4 {{alvo}}
+tracert -d -h 15 {{alvo}}
+pathping -n -q 5 {{alvo}}
+# pacote perdido no 1o salto = wifi/switch; no ultimo = destino`
+},
+{
+  id:'nslookup', cat:'rede', risk:'safe', lang:'cmd', title:'Consultar DNS (nslookup / Resolve-DnsName)',
+  desc:'Confirma se o nome resolve, com qual servidor e qual registro.',
+  tags:['nslookup','dns','resolver','registro'],
+  inputs:[{id:'nome', label:'Nome / domínio', ph:'portal.empresa.com.br'}],
+  body:String.raw`nslookup {{nome}}
+nslookup -type=SRV {{nome}}
+Resolve-DnsName {{nome}} -Type A
+Resolve-DnsName -Type MX {{nome}}
+nslookup {{nome}} 8.8.8.8`
+},
+{
+  id:'test-port', cat:'rede', risk:'safe', lang:'ps', title:'Testar porta específica (TCP)',
+  desc:'Checa se o serviço responde: 3389 RDP, 445 SMB, 443 web, 587 SMTP, 1433 SQL.',
+  tags:['porta','tcp','teste','firewall'],
+  inputs:[
+    {id:'host', label:'Host', ph:'servidor01'},
+    {id:'porta', label:'Porta', ph:'445', def:'445'}
+  ],
+  body:String.raw`Test-NetConnection {{host}} -Port {{porta}} -InformationLevel Detailed
+# portas comuns: 445 SMB | 3389 RDP | 5985 WinRM | 443 HTTPS | 1433 SQL | 25/587 SMTP`
+},
+{
+  id:'reset-net', cat:'rede', risk:'warn', lang:'cmd', title:'Reset de WinStack + IP (rede quebrada de vez)',
+  desc:'Reseta Winsock, IP e firewall. Quase sempre pede reinício. Uso quando nada mais resolve.',
+  tags:['reset','winsock','ip','firewall'],
+  body:String.raw`netsh winsock reset
+netsh int ip reset
+netsh advfirewall reset
+netsh interface tcp set heuristics disabled
+netsh interface tcp set global autotuninglevel=normal
+ipconfig /release
+ipconfig /renew
+ipconfig /flushdns
+shutdown /r /t 15 /c "Reinicio de rede em 15s"`,
+},
+{
+  id:'renew-ip', cat:'rede', risk:'safe', lang:'cmd', title:'Renovar IP DHCP',
+  desc:'Obtém um IP novo do servidor DHCP — resolve IP 169.254.x.x e conflito de endereço.',
+  tags:['dhcp','renew','release','169.254'],
+  body:String.raw`ipconfig /release
+ipconfig /renew
+ipconfig /all
+arp -a`
+},
+{
+  id:'ip-conflict', cat:'rede', risk:'warn', lang:'ps', title:'Procurar IP duplicado na rede',
+  desc:'Dois PCs com o mesmo IP geram queda intermitente difícil de diagnosticar.',
+  tags:['ip','duplicado','conflito','arp'],
+  inputs:[{id:'ip', label:'IP suspeito', ph:'10.0.1.55'}],
+  body:String.raw`ping -n 2 {{ip}}
+arp -a {{ip}}
+# se dois MACs responderem, ha conflito (libere no DHCP e ajuste a reserva)
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '127.*'} |
+  Select IPAddress,InterfaceAlias,PrefixOrigin | Format-Table`
+},
+{
+  id:'proxy', cat:'rede', risk:'warn', lang:'ps', title:'Verificar / limpar proxy e configuração de internet',
+  desc:'Proxy herdeiro ou PAC quebrado = "sem internet" só no navegador e em alguns apps.',
+  tags:['proxy','pac','internet','ie'],
+  body:String.raw`netsh winhttp show proxy
+Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' |
+  Select ProxyEnable,ProxyServer,AutoConfigURL,AutoDetect
+# limpar proxy do usuario:
+Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' ProxyEnable 0
+Remove-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' AutoConfigURL -EA SilentlyContinue
+ipconfig /flushdns`
+},
+{
+  id:'wifi-info', cat:'rede', risk:'safe', lang:'cmd', title:'Status do Wi-Fi: sinal, canal, BSSID',
+  desc:'Sinal fraco, canal congestionado ou roaming — dados para discutir com a TI de rede.',
+  tags:['wifi','sinal','canal','bssid','semfio'],
+  body:String.raw`netsh wlan show interfaces
+netsh wlan show networks mode=bssid
+# perfil e senha da rede:
+netsh wlan show profile name="Empresa-Corp" key=clear`
+},
+{
+  id:'firewall', cat:'rede', risk:'safe', lang:'cmd', title:'Ver estado do Firewall do Windows',
+  desc:'Confirma se o firewall está ligado e em quais perfis, e lista regras bloqueantes recentes.',
+  tags:['firewall','regra','bloqueio','perfil'],
+  body:String.raw`netsh advfirewall show allprofiles
+netsh advfirewall firewall show rule name=all dir=in | findstr /i "block" | more
+netsh advfirewall monitor show firewall`
+},
+{
+  id:'netstat', cat:'rede', risk:'safe', lang:'cmd', title:'Portas em uso e conexões ativas',
+  desc:'Identifica processo em 0.0.0.0:porta, conexões ESTABLISHED e TIME_WAIT.',
+  tags:['netstat','porta','conexao','processo'],
+  body:String.raw`netstat -ano | findstr LISTENING
+netstat -ano | findstr ESTABLISHED
+# qual processo e esse PID:
+tasklist /fi "PID eq 1234"
+netstat -b   # requer admin, mostra o executavel`
+},
+{
+  id:'vpn', cat:'rede', risk:'warn', lang:'ps', title:'Diagnóstico de VPN corporativa',
+  desc:'Verifica adaptador, rota padrão, DNS interno e servidor de VPN.',
+  tags:['vpn','rotas','conectividade','remoto'],
+  body:String.raw`Get-VpnConnection -EA SilentlyContinue | Format-List Name,ServerAddress,SplitTunneling,ConnectionStatus
+Get-NetAdapter | Where Status -eq Up | Select Name,InterfaceDescription,LinkSpeed
+Get-NetRoute -DestinationPrefix '0.0.0.0/0' | Select InterfaceAlias,NextHop,RouteMetric
+Get-DnsClientServerAddress | Select InterfaceAlias,ServerAddresses
+# refazer a conexao:
+rasdial "Nome da VPN" /disconnect ; rasdial "Nome da VPN" usuario senha`
+},
+{
+  id:'share-blocked', cat:'rede', risk:'warn', lang:'cmd', title:'Acesso a pasta de rede negado (\\servidor)',
+  desc:'Fluxo para recuperar acesso a compartilhamento com credencial antiga salva.',
+  tags:['compartilhamento','share','negado','smb'],
+  inputs:[{id:'host', label:'Servidor', ph:'files01'}],
+  body:String.raw`net use
+net use * /delete /y
+nltest /sc_query:{{dominio}}
+dir \\{{host}}$
+# SMB v1 pode ser o problema em equipamento antigo:
+Get-SmbServerConfiguration | Select EnableSMB1Protocol
+Get-WinEvent -LogName Microsoft-Windows-SMBClient/Security -MaxEvents 20 -EA SilentlyContinue`
+},
+/* ---------- MANUTENÇÃO RÁPIDA ---------- */
+{
+  id:'sfc-dism', cat:'manutencao', risk:'warn', lang:'cmd', title:'Reparar arquivos do Windows (SFC + DISM)',
+  desc:'Corrige arquivos do sistema corrompidos. Demora (10-30 min) e às vezes pede reinício.',
+  tags:['sfc','dism','reparar','corrompido','integridade'],
+  body:String.raw`DISM /Online /Cleanup-Image /CheckHealth
+DISM /Online /Cleanup-Image /ScanHealth
+DISM /Online /Cleanup-Image /RestoreHealth
+sfc /scannow
+# ver o log:
+notepad %windir%\Logs\CBS\CBS.log`
+},
+{
+  id:'wu-reset', cat:'manutencao', risk:'warn', lang:'cmd', title:'Resetar o Windows Update (erro 80072ef / 0x80070002)',
+  desc:'Para quando a atualização fica presa em 0% ou retorna erro de download.',
+  tags:['windows update','wuauserv','bits','erro','reset'],
+  body:String.raw`net stop wuauserv
+net stop bits
+net stop cryptsvc
+ren %systemroot%\SoftwareDistribution SoftwareDistribution.old
+ren %systemroot%\system32\catroot2 catroot2.old
+net start wuauserv
+net start bits
+net start cryptsvc
+wuauclt /resetauthorization /detectnow
+UsoClient StartScan`
+},
+{
+  id:'spooler', cat:'manutencao', risk:'warn', lang:'cmd', title:'Consertar impressão (fila travada / spooler parado)',
+  desc:'Limpa a fila de impressão corrompida e reinicia o serviço — pedidos presos somem.',
+  tags:['impressora','spooler','fila','travada','print'],
+  body:String.raw`net stop spooler
+del /Q /F "%windir%\System32\spool\PRINTERS\*.*"
+net start spooler
+# verificar impressoras:
+wmic printer list brief
+# recriar a impressora de rede:
+rundll32 printui.dll,PrintUIEntry /k /n "\\servidor\Impressora"
+# reiniciar o servico depois de limpar:
+# net stop spooler && net start spooler`
+},
+{
+  id:'disk-clean', cat:'manutencao', risk:'safe', lang:'cmd', title:'Limpeza de disco e temporários',
+  desc:'Libera espaço rápido: temporários, cache de atualização, lixeira e miniaturas.',
+  tags:['limpeza','disco','espaco','temp','espaço'],
+  body:String.raw`cleanmgr /sagerun:1
+del /s /f /q %temp%\*.*
+del /s /f /q c:\windows\temp\*.*
+del /f /q "%USERPROFILE%\AppData\Local\Microsoft\Windows\INetCache\*.*"
+# espaco em uso:
+powershell -c "Get-PSDrive C | Select Used,Free"
+# armazenamento integrado:
+ms-settings:storagesense`
+},
+{
+  id:'disk-space', cat:'manutencao', risk:'safe', lang:'ps', title:'O que está ocupando o disco (top 15 pastas)',
+  desc:'Acha a pasta gorda (Downloads, cache, PST, logs) antes de reclamar de C: cheio.',
+  tags:['disco','espaco','ocupando','top','pastas'],
+  inputs:[{id:'pasta', label:'Pasta raiz', ph:'C:\\', def:'C:\\'}],
+  body:String.raw`Get-ChildItem {{pasta}} -Directory -Force -EA SilentlyContinue | ForEach-Object {
+  $s = (Get-ChildItem $_.FullName -Recurse -File -Force -EA SilentlyContinue | Measure-Object Length -Sum).Sum
+  [pscustomobject]@{ Pasta=$_.Name; GB=[math]::Round($s/1GB,2) }
+} | Sort-Object GB -Descending | Select -First 15 | Format-Table -AutoSize
+
+Get-Volume -DriveLetter C | Select DriveLetter,SizeRemaining,Size | Format-List`
+},
+{
+  id:'explorer-restart', cat:'manutencao', risk:'safe', lang:'ps', title:'Reiniciar o Explorer (área de trabalho travada)',
+  desc:'Trata área de trabalho preta, barra de tarefas morta, ícones sumidos e menu de contexto quebrado.',
+  tags:['explorer','barra','tarefas','travada','desktop'],
+  body:String.raw`Stop-Process -Name explorer -Force
+Start-Sleep 2
+if (-not (Get-Process explorer -EA SilentlyContinue)){ Start-Process explorer.exe }
+# reconstruir cache de icone:
+ie4uinit.exe -show
+Get-Process | Sort-Object CPU -Desc | Select -First 10 Name,CPU,WS | Format-Table`
+},
+{
+  id:'kill-proc', cat:'manutencao', risk:'warn', lang:'cmd', title:'Encerrar processo travado / achar quem segura o arquivo',
+  desc:'Mat o aplicativo que não responde e descobre qual processo trava a pasta.',
+  tags:['processo','travado','taskkill','fechar'],
+  inputs:[{id:'proc', label:'Processo', ph:'excel'}],
+  body:String.raw`taskkill /f /im {{proc}}.exe
+tasklist | findstr /i {{proc}}
+# arquivos travados (renomear copia):
+handle.exe {{proc}} -accepteula
+# gerenciador de tarefas: Ctrl+Shift+Esc`
+},
+{
+  id:'slow-boot', cat:'manutencao', risk:'safe', lang:'ps', title:'Por que o PC demora para ligar',
+  desc:'Tempo de boot, programas de inicialização e serviços de terceiros mais pesados.',
+  tags:['lento','boot','inicio','demora','startup'],
+  body:String.raw`Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Diagnostics-Performance/Operational'; Id=100} -MaxEvents 5 |
+  ForEach-Object { [regex]::Match($_.Message,'\d+ ms').Value + ' -> ' + ([regex]::Split($_.Message,"\r?\n"))[0] }
+'--- inicializacao ---'
+Get-CimInstance Win32_StartupCommand | Select Name,Command,Location | Format-Table -Wrap
+'--- servicos lentos ---'
+Get-Service | Where-Object Status -eq 'Running' | Select -First 25 Name,DisplayName | Format-Table
+shell:startup`
+},
+{
+  id:'startup-items', cat:'manutencao', risk:'warn', lang:'ps', title:'Programas que abrem com o Windows (desativar)',
+  desc:'Reduz tempo de logon desativando inicialização desnecessária (só desative o que conhecer).',
+  tags:['startup','inicializacao','desativar','logon'],
+  body:String.raw`Get-CimInstance Win32_StartupCommand | Select Name,Location,Command | Format-Table -Wrap
+Get-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' | Select -ExpandProperty Property
+Get-Item 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run' | Select -ExpandProperty Property
+# desativar:
+# Remove-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'NomeDoApp'
+ms-settings:startupapps`
+},
+{
+  id:'services-down', cat:'manutencao', risk:'warn', lang:'ps', title:'Serviços essenciais parados',
+  desc:'Lista serviços automáticos que deveriam estar rodando (rede, impressão, update, antivírus).',
+  tags:['servico','services','parado','automat'],
+  body:String.raw`Get-Service |
+  Where-Object { $_.StartType -eq 'Automatic' -and $_.Status -ne 'Running' } |
+  Select Name,DisplayName,Status,StartType | Format-Table -AutoSize
+# reiniciar um especifico:
+Restart-Service -Name 'Spooler' -Force
+sc query type= service state= all | findstr /i "RUNNING STOPPED"`
+},
+{
+  id:'recent-errors', cat:'manutencao', risk:'safe', lang:'ps', title:'Erros recentes do Windows (Event Log)',
+  desc:'Últimos erros críticos/aviso do sistema e aplicativos — primeiro passo de qualquer investigação.',
+  tags:['eventlog','erros','log','diagnostico'],
+  inputs:[{id:'horas', label:'Últimas (horas)', ph:'24', def:'24'}],
+  body:String.raw`Get-WinEvent -FilterHashtable @{Level=1,2; StartTime=(Get-Date).AddHours(-{{horas}})} -MaxEvents 40 -EA SilentlyContinue |
+  Select-Object TimeCreated,ProviderName,Id,LevelDisplayName,@{n='Msg';e={([regex]::Split($_.Message,"\r?\n"))[0]}} |
+  Format-Table -AutoSize -Wrap
+# bluescreen / WHEA:
+Get-WinEvent -LogName System -MaxEvents 30 |
+  Where-Object { $_.Id -in 41,1001,141,129 } | Format-Table TimeCreated,Id,ProviderName`
+},
+{
+  id:'restore-point', cat:'manutencao', risk:'safe', lang:'ps', title:'Criar ponto de restauração antes de mexer',
+  desc:'Sempre antes de driver, update grande ou mudança de registro.',
+  tags:['restauracao','backup','ponto','driver'],
+  body:String.raw`Checkpoint-Computer -Description "Suporte antes de manutencao" -RestorePointType MODIFY_SETTINGS
+Enable-ComputerRestore -Drive "C:\"
+vssadmin list shadows /for=C:
+# restaurar: rstrui.exe`
+},
+{
+  id:'backup-user', cat:'manutencao', risk:'warn', lang:'cmd', title:'Backup rápido dos dados do usuário',
+  desc:'Copia Documentos, Área de Trabalho, favoritos e perfis antes de manutenção pesada.',
+  tags:['backup','dados','robocopy','copiar'],
+  inputs:[
+    {id:'host', label:'Destino (pasta/share)', ph:'\\files01\backup'}
+  ],
+  body:String.raw`robocopy "%USERPROFILE%\Documents" "{{host}}\{{usuario}}\Documents" /E /XJ /R:1 /W:1 /LOG:%TEMP%\backup.log
+robocopy "%USERPROFILE%\Desktop"  "{{host}}\{{usuario}}\Desktop"  /E /XJ /R:1 /W:1
+robocopy "%USERPROFILE%\Favorites" "{{host}}\{{usuario}}\Favoritos" /E /XJ /R:1 /W:1
+notepad %TEMP%\backup.log`
+},
+{
+  id:'office-reset', cat:'manutencao', risk:'warn', lang:'ps', title:'Consertar Microsoft Office / Teams (pede senha sempre)',
+  desc:'Limpa credenciais do Office, registra o componente e reseta o cache do Teams.',
+  tags:['office','teams','outlook','credencial','reset'],
+  body:String.raw`# credenciais do Office (causa classica de pedir senha o tempo todo)
+Get-Process WINWORD,EXCEL,OUTLOOK,ms-teams -EA SilentlyContinue | Stop-Process -Force
+cmdkey /list | findstr /i "msteams|office"
+# Teams novo (novas e classicas):
+Remove-Item "$env:APPDATA\Microsoft\Teams\cache\*" -Recurse -Force -EA SilentlyContinue
+Remove-Item "$env:LOCALAPPDATA\Packages\MSTeams*\LocalCache\*" -Recurse -Force -EA SilentlyContinue
+Get-AppxPackage Microsoft.Teams | Reset-AppxPackage
+# reparar pela configuracao de Aplicativos:
+ms-settings:appsfeatures-app
+# reativar o componente:
+Get-AppxProvisionedPackage -Online | Where DisplayName -like "*Office*" | Format-Table`
+},
+{
+  id:'store-reset', cat:'manutencao', risk:'warn', lang:'ps', title:'Consertar Microsoft Store / apps não abrem',
+  desc:'Erro 0x80070422, app travado em "pendente" ou Store que não atualiza.',
+  tags:['store','appx','0x80070422','windows'],
+  body:String.raw`Get-AppxPackage -AllUsers Microsoft.WindowsStore | Reset-AppxPackage
+Get-AppxPackage -AllUsers | Where-Object { $_.Name -like "*WindowsStore*" } |
+  ForEach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" }
+Start-Process "ms-windows-store:"
+# se a loja/clip estiver desabilitada por politica:
+Get-AppxPackage Microsoft.WindowsStore | Enable-AppxPackage`
+},
+{
+  id:'chkdsk', cat:'manutencao', risk:'danger', lang:'cmd', title:'Verificar integridade do disco (CHKDSK / SMART)',
+  desc:'Agora com /f o Windows agenda reparo no próximo boot — avise o usuário.',
+  tags:['chkdsk','disco','smart','setor','integridade'],
+  body:String.raw`chkdsk C: /scan
+wmic diskdrive get status,model
+wmic logicaldisk get caption,freespace,size
+Get-PhysicalDisk | Select FriendlyName,HealthStatus,OperationalStatus
+# reparo agendado (nao desligue o PC):
+# chkdsk C: /f /r`
+},
+{
+  id:'icacls', cat:'manutencao', risk:'danger', lang:'cmd', title:'Corrigir permissões de pasta (ACESSO NEGADO)',
+  desc:'Restaura permissões padrão de pasta de usuário. Backup/Documentos sem acesso — use com atenção.',
+  tags:['icacls','permissao','negado','acesso'],
+  inputs:[{id:'pasta', label:'Pasta', ph:'C:\\Users\\jsilva\\Documents'}],
+  body:String.raw`icacls "{{pasta}}" /grant %USERNAME%:(OI)(CI)F /T
+icacls "{{pasta}}" /reset /T
+# herdar do pai:
+icacls "{{pasta}}" /setintegritylevel (OI)(CI)R
+icacls "{{pasta}}" /save %TEMP%\acl.bak /T`
+},
+{
+  id:'power', cat:'manutencao', risk:'safe', lang:'ps', title:'Energia, bateria e aquecimento (notebook)',
+  desc:'Relatório de bateria, plano ativo e processos pesados que drenam energia.',
+  tags:['bateria','energia','powercfg','notebook','quente'],
+  body:String.raw`powercfg /getactivescheme
+powercfg /batteryreport /output %TEMP%\battery.html
+Start-Process %TEMP%\battery.html
+powercfg /energy /duration 60
+Get-Process | Sort WS -Desc | Select -First 10 Name,@{n='MB';e={[math]::Round($_.WS/1MB)}} | Format-Table`
+},
+{
+  id:'device-err', cat:'manutencao', risk:'warn', lang:'ps', title:'Dispositivos com erro no Gerenciador',
+  desc:'Aparece aquele ícone amarelo? Identifica o hardware sem driver ou com driver falhando.',
+  tags:['driver','device','gerenciador','hardware','erro'],
+  body:String.raw`Get-PnpDevice -Status Error,Degraded,Unknown -EA SilentlyContinue |
+  Select Class,FriendlyName,Status,InstanceId | Format-Table -AutoSize
+pnputil /enum-devices /problem
+# instalar driver de um arquivo .inf:
+# pnputil /add-driver C:\drivers\oem.inf /install`
+},
+{
+  id:'uninstall', cat:'manutencao', risk:'warn', lang:'ps', title:'Desinstalar programa que travou',
+  desc:'Lista e desinstala por linha de comando quando o desinstalador não abre.',
+  tags:['desinstalar','uninstall','programa','msi'],
+  inputs:[{id:'app', label:'Nome do programa', ph:'TeamViewer'}],
+  body:String.raw`Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -EA SilentlyContinue |
+  Where-Object DisplayName -like '*{{app}}*' |
+  Select DisplayName,DisplayVersion,UninstallString,PSChildName | Format-List
+# silencioso ( MSI ):
+# msiexec /x {GUID-DAQUI} /qn /norestart`
+},
+{
+  id:'print-fix', cat:'manutencao', risk:'warn', lang:'ps', title:'Impressora não imprime / sai na porta errada',
+  desc:'Confere porta, fila, driver e define a impressora padrão do usuário.',
+  tags:['impressora','porta','fila','padrao','print'],
+  inputs:[{id:'impressora', label:'Impressora', ph:'HP-Financeiro'}],
+  body:String.raw`Get-Printer | Select Name,DriverName,PortName,PrinterStatus | Format-Table -AutoSize
+Get-PrintJob -PrinterName '{{impressora}}' -EA SilentlyContinue
+Get-PrintJob -PrinterName '{{impressora}}' -EA SilentlyContinue | Remove-PrintJob
+(Get-CimInstance Win32_Printer | Where-Object Default).Name
+(Get-CimInstance Win32_Printer | Where-Object Name -like '*{{impressora}}*').SetDefaultPrinter()
+Restart-Service Spooler -Force`
+},
+{
+  id:'activate', cat:'manutencao', risk:'warn', lang:'cmd', title:'Licenciamento do Windows (ativação)',
+  desc:'Consulta e reativa a chave — depois de rebuild de perfil ou mudança de placa-mãe.',
+  tags:['ativacao','licenca','slmgr','key'],
+  body:String.raw`slmgr /dli
+slmgr /dlv
+slmgr /ato
+slmgr /cpkcls
+# informacoes de edicao:
+winver`
+},
+{
+  id:'safeboot', cat:'manutencao', risk:'danger', lang:'cmd', title:'Entrar no Modo Seguro / desativar drivers na inicialização',
+  desc:'Só quando o Windows não sobe. Requer administrador e muda o boot — desfaça depois.',
+  tags:['modo seguro','safe boot','boot','bcdedit'],
+  body:String.raw`bcdedit /set {current} safeboot minimal
+shutdown /r /t 10 /c "Entrando em Modo Seguro"
+# voltar ao normal:
+# bcdedit /deletevalue {current} safeboot
+# opcoes de recuperacao:
+# shutdown /r /o /t 10`,
+},
+{
+  id:'msinfo', cat:'manutencao', risk:'safe', lang:'ps', title:'Coletar diagnóstico completo para o chamado',
+  desc:'Gera msinfo32, inventário de hardware e relatório de sistema em um pasta só.',
+  tags:['msinfo32','coleta','relatorio','evidencia'],
+  body:String.raw`$d = "$env:USERPROFILE\Desktop\diagnostico-$(Get-Date -f yyyyMMdd-HHmm)"
+New-Item $d -ItemType Directory -Force | Out-Null
+msinfo32 /nfo "$d\msinfo32.nfo"
+systeminfo > "$d\systeminfo.txt"
+Get-ComputerInfo | Out-File "$d\computerinfo.txt"
+Get-Process | Sort WS -Desc | Out-File "$d\processos.txt"
+ipconfig /all > "$d\rede.txt"
+Get-WinEvent -LogName System -MaxEvents 200 | Out-File "$d\system-events.txt"
+Compress-Archive -Path $d -DestinationPath "$d.zip" -Force
+Write-Host "Coleta: $d.zip" -ForegroundColor Green`
+},
+/* ---------- UTILITÁRIOS ---------- */
+{
+  id:'teclas', cat:'util', risk:'safe', lang:'txt', title:'Cheat sheet: atalhos de teclado do Windows',
+  desc:'Para passar ao usuário por telefone e para usar no próprio atendimento.',
+  tags:['atalho','teclado','teclas','win'],
+  body:String.raw`Win + X            menu administrativo (PowerShell/Terminal admin)
+Win + I            Configuracoes
+Win + R            Executar
+Win + E            Explorer
+Win + L            Bloquear estacao
+Win + D            mostrar desktop (de novo = restaurar)
+Win + Shift + S    captura de tela (recorte)
+Win + Ctrl + D     novo desktop virtual
+Win + Tab          trocar janelas/desktops
+Ctrl + Shift + Esc gerenciador de tarechas direto
+Ctrl + Alt + Del   opcoes de seguranca / trocar usuario
+Alt + F4           fechar janela (no desktop = desligar)
+Alt + Tab          alternar aplicativos
+Win + +/-          lupa de acessibilidade
+Ctrl + Shift + V   colar sem formatar (apps suportados)
+Shift + Clique     abrir nova instancia do programa
+Win + P            projetar/tela dupla`
+},
+{
+  id:'ms-settings', cat:'util', risk:'safe', lang:'cmd', title:'Atalhos diretos para Configurações (ms-settings)',
+  desc:'Abre a tela certa sem procurar no menu — Índice, Rede, Aplicativos, Contas, Windows Update.',
+  tags:['ms-settings','config','atalho','windows'],
+  body:String.raw`ms-settings:windowsupdate
+ms-settings:network-status
+ms-settings:appsfeatures-app
+ms-settings:signinoptions
+ms-settings:storagesense
+ms-settings:startupapps
+ms-settings:workplace
+ms-settings:privacy-microphone
+control /name Microsoft.WindowsUpdate`
+},
+{
+  id:'msg-user', cat:'util', risk:'warn', lang:'cmd', title:'Enviar mensagem na tela do usuário (remoto)',
+  desc:'Avisa antes de reiniciar ou derrubar a sessão — evita reclamação de trabalho perdido.',
+  tags:['msg','mensagem','aviso','remoto','usuario'],
+  inputs:[
+    {id:'host', label:'Host', ph:'PC-ABC123'},
+    {id:'texto', label:'Mensagem', ph:'Suporte: reinicio em 15s, salve seu trabalho'}
+  ],
+  body:String.raw`msg * /server:{{host}} "{{texto}}"
+msg {{usuario}} /server:{{host}} "{{texto}}"`
+},
+{
+  id:'runas', cat:'util', risk:'safe', lang:'ps', title:'Abrir programa com outra credencial (admin)',
+  desc:'Para rodar algo com conta administrativa sem trocar de usuário no PC.',
+  tags:['runas','admin','credencial','privilegio'],
+  inputs:[{id:'programa', label:'Programa', ph:'gpedit.msc'}],
+  body:String.raw`Start-Process {{programa}} -Verb RunAs
+# com credencial especifica:
+$cred = Get-Credential
+Start-Process powershell -Credential $cred -ArgumentList '-NoExit','-Command','hostname; whoami'`
+},
+{
+  id:'uac-admin', cat:'util', risk:'warn', lang:'cmd', title:'Diagnosticar permissão de administrador',
+  desc:'Confirma se o usuário atual é admin local e se o UAC está ativo antes de prometer execução.',
+  tags:['admin','uac','permissao','elevacao'],
+  body:String.raw`whoami /groups | findstr /i "S-1-5-32-544"
+net localgroup Administradores
+net session
+powershell -c "([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole('Administrators')"
+reg query HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA`
+},
+{
+  id:'hardware-info', cat:'util', risk:'safe', lang:'ps', title:'Ficha técnica rápida do PC',
+  desc:'Modelo, número de série, memória, disco, CPU e uptime — tudo para o chamado.',
+  tags:['hardware','serial','ficha','modelo','bios'],
+  body:String.raw`Get-CimInstance Win32_ComputerSystem  | Select Manufacturer,Model,TotalPhysicalMemory,UserName
+Get-CimInstance Win32_BIOS           | Select SerialNumber,SMBIOSBIOSVersion,ReleaseDate
+Get-CimInstance Win32_Processor      | Select Name,NumberOfCores,MaxClockSpeed
+Get-PhysicalDisk                     | Select FriendlyName,MediaType,@{n='GB';e={[math]::Round($_.Size/1GB)}},HealthStatus
+Get-CimInstance Win32_OperatingSystem | Select Caption,Version,LastBootUpTime,OSArchitecture
+Get-CimInstance Win32_ComputerSystem | Select PartOfDomain,Domain,DomainRole | Format-List`
+},
+{
+  id:'user-session', cat:'util', risk:'safe', lang:'cmd', title:'Quem está logado nesta máquina',
+  desc:'Usuário interativo, domínio e sessões remotas — antes de trocar senha de quem está usando.',
+  tags:['logado','sessao','quser','whoami'],
+  body:String.raw`whoami
+quser
+query session
+echo %USERDOMAIN%\%USERNAME%
+powershell -c "(Get-CimInstance Win32_ComputerSystem).UserName"`
+},
+{
+  id:'timer', cat:'util', risk:'safe', lang:'cmd', title:'Aviso com contagem regressiva (antes de reiniciar)',
+  desc:'Dá tempo para o usuário salvar. Cancele com shutdown /a.',
+  tags:['reiniciar','aviso','shutdown','contagem'],
+  inputs:[{id:'seg', label:'Segundos', ph:'60', def:'60'}],
+  body:String.raw`shutdown /r /t {{seg}} /c "Suporte: reinicio em {{seg}}s. Salve seu trabalho."
+# cancelar:
+shutdown /a`
+},
+/*__T1__*/
+];
+
+const CHECKLISTS = [
+{
+  id:'ck-inicio', title:'1 · Triagem do atendimento',
+  steps:[
+    'Confirmar identidade do solicitante (ramal, gestor, e-mail)',
+    'Registrar no chamado: usuário, host, IP, domínio e sintoma',
+    'Preencher o Contexto no topo do painel (usuário, host, domínio)',
+    'Reproduzir o problema ou pedir prints/erro exato',
+    'Verificar se afeta só esta máquina ou vários usuários',
+    'Checar se houve mudança recente (update, senha, novo app, troca de PC)',
+    'Anotar o que já foi tentado antes de você'
+  ]
+},
+{
+  id:'ck-bloqueio', title:'2 · Bloqueio de conta',
+  steps:[
+    'Validar identidade antes de liberar acesso',
+    'netdom query fsmo → anotar o DC (PDC Emulator)',
+    'Get-ADUser → status LockedOut, BadPwdCount, LastBadPasswordAttempt',
+    'Evento 4740 no DC → anotar a máquina de ORIGEM do bloqueio',
+    'Eventos 4625/4771 → anotar IP e horário da falha',
+    'Unlock-ADAccount e confirmar que destravou',
+    'Resetar a senha com ChangePasswordAtLogon',
+    'Limpar credenciais salvas no PC (cmdkey / keymgr) e nos apps',
+    'Avisar sobre celular/Outlook com senha antiga e pedir redesenho do e-mail',
+    'Testar logon, rede, e-mail e ERP com o usuário',
+    'Registrar causa e origem no chamado'
+  ]
+},
+{
+  id:'ck-senha', title:'3 · Troca / recuperação de senha',
+  steps:[
+    'Validar identidade (pergunta de segurança ou gestor)',
+    'Verificar se a conta está bloqueada/desabilitada antes de resetar',
+    'Gerar senha temporária no gerador de senhas',
+    'Set-ADAccountPassword -Reset + Enable-ADAccount',
+    'Aplicar ChangePasswordAtLogon (senha vale só para o 1º acesso)',
+    'Confirmar que o usuário conseguiu logar',
+    'Lembrar do 2º fator / redesenho do e-mail no celular',
+    'Limpar senha antiga salva (navegador, VPN, mapeamento de unidade)',
+    'Nunca enviar senha por chat aberto — usar canal aprovado',
+    'Marcar chamado como Resolvido com o registro do procedimento'
+  ]
+},
+{
+  id:'ck-lento', title:'4 · PC lento',
+  steps:[
+    'Verificar disco: Get-Volume / chkdsk (menos de 15% livre é alerta)',
+    'Verificar temperatura e plano de energia (powercfg /energy)',
+    'Identificar processos com mais CPU/memória (Task Manager)',
+    'Ver inicialização: desativar itens desnecessários',
+    'Ver serviços automáticos parados',
+    'Limpar temporários e cache do navegador',
+    'Rodar DISM + sfc se houver suspeita de corrupção',
+    'Verificar erros no Event Log (erros críticos, WHEA, 41)',
+    'Conferir se há update/driver pendente',
+    'Medir tempo de boot antes e depois da otimização',
+    'Se continuar lento: coletar diagnóstico e escalar para troca/hardware'
+  ]
+},
+{
+  id:'ck-navegador', title:'5 · Navegador com problema',
+  steps:[
+    'Descobrir qual navegador e qual a versão (chrome://version)',
+    'Ver se o problema é só neste site ou em todos',
+    'Testar em aba anônima (Ctrl+Shift+N) para isolar extensão',
+    'Fechar navegador e limpar apenas o cache (sem apagar login)',
+    'ipconfig /flushdns e testar de novo',
+    'Ver se há política de GPO/registro aplicada no navegador',
+    'Testar em modo limpo (--disable-extensions / --user-data-dir)',
+    'Checar proxy e configuração de internet',
+    'Se perfil corrompido: renomear a pasta Default e deixar recriar',
+    'Recuperar favoritos/senhas do perfil antigo',
+    'Atualizar o navegador (winget upgrade)',
+    'Confirmar com o usuário antes de fechar'
+  ]
+},
+{
+  id:'ck-internet', title:'6 · Sem internet / rede',
+  steps:[
+    'Confirmar se afeta 1 pessoa ou várias (checar mais um PC)',
+    'Get-NetConnectionProfile → verificar IPv4Connectivity',
+    'Ping do gateway e depois de 8.8.8.8 (onde quebra?)',
+    'Ping por nome → se falhar, é DNS (ipconfig /flushdns)',
+    'Conferir IP, máscara e gateway (dhcp x estático x 169.254)',
+    'Testar IP duplicado (arp -a)',
+    'Checar VPN e proxy (netsh winhttp show proxy)',
+    'Testar porta do serviço alvo (Test-NetConnection)',
+    'Wi-Fi: sinal, canal, perfil da rede',
+    'Se nada resolver: reset winsock/IP + reinício',
+    'Registrar o que era (IP, DNS, porta) para o time de rede'
+  ]
+},
+{
+  id:'ck-novopc', title:'7 · Novo PC / onboarding',
+  steps:[
+    'Conferir nota fiscal, número de série e garantia',
+    'Atualizar BIOS/Windows/drivers antes de entregar',
+    'Entrar no domínio e confirmar Test-ComputerSecureChannel',
+    'Aplicar GPO (gpupdate /force) e conferir unidades/impressoras',
+    'Criar conta, desbloquear política de senha e definir 2º fator',
+    'Instalar antivírus/EDR e conferir proteção em execução',
+    'Instalar Office, Teams, ERP e navegador padrão da empresa',
+    'Configurar OneDrive/backup de pastas de trabalho',
+    'Mapear unidades e testar acesso a compartilhamentos',
+    'Testar impressora, webcam, headsets e tela extra',
+    'Criar ponto de restauração',
+    'Entregar com senha provisória + checklist de senha para o usuário',
+    'Registrar número de série, entrega e responsável no chamado'
+  ]
+}
+];
+
+setTheme(prefs.theme);
+syncCtxInputs();
+renderNav();
+renderTools();
+setView(prefs.view);
+</script>
+</body>
+</html>

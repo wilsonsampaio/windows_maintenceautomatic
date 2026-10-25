@@ -1,0 +1,12 @@
+# SO / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
+
+# backups locais
+*.bak
+*.old
